@@ -186,7 +186,7 @@ function HRLogin() {
       }}>
         <div style={{ textAlign: 'center', marginBottom: '30px' }}>
           <img 
-            src="/jarurat-logo.png" 
+            src="/JCF.jpg" 
             alt="Jarurat Care Logo" 
             style={{ height: '50px', marginBottom: '12px' }} 
           />

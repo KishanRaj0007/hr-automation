@@ -1696,11 +1696,101 @@ Jarurat Care Foundation`;
         <div>
           <div style={{ background: '#fff', padding: '24px', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', marginBottom: '25px', border: '1px solid #e2e8f0' }}>
             <h2 style={{ margin: '0 0 15px 0', color: '#111827', fontSize: '22px' }}><strong>Candidate Profile</strong></h2>
-            <p style={{ margin: '8px 0', color:'#1a202c'}}><strong>Name:</strong> {candidate.name || candidate.full_name}</p>
-            <p style={{ margin: '8px 0', color:'#1a202c'}}><strong>Email:</strong> {candidate.email}</p>
-            <p style={{ margin: '8px 0',color:'#1a202c'}}><strong>Phone:</strong> {candidate.phone}</p>
             
-            <p style={{ margin: '8px 0',color:'#1a202c'}}>
+            {/* Basic Info */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 20px' }}>
+              <p style={{ margin: '4px 0', color:'#1a202c'}}><strong>Name:</strong> {candidate.name || candidate.full_name}</p>
+              <p style={{ margin: '4px 0', color:'#1a202c'}}><strong>Email:</strong> {candidate.email}</p>
+              <p style={{ margin: '4px 0', color:'#1a202c'}}><strong>Phone:</strong> {candidate.phone}</p>
+              <p style={{ margin: '4px 0', color:'#1a202c'}}><strong>Domain:</strong> {candidate.domain}</p>
+              <p style={{ margin: '4px 0', color:'#1a202c'}}><strong>Source:</strong> {candidate.source}</p>
+              <p style={{ margin: '4px 0', color:'#1a202c'}}>
+                <strong>Stage: </strong> 
+                <span style={{ 
+                  color: isOnWaitlist ? '#8b5cf6' : '#057b6e', 
+                  fontWeight: '700',
+                  backgroundColor: isOnWaitlist ? '#f5f3ff' : 'transparent',
+                  padding: isOnWaitlist ? '2px 10px' : '0',
+                  borderRadius: '4px'
+                }}>
+                  {candidate.current_stage}
+                </span>
+              </p>
+            </div>
+
+            {/* ===== EDUCATION SECTION ===== */}
+            {(candidate.college_name || candidate.degree_course || candidate.graduation_year) && (
+              <>
+                <hr style={{ margin: '12px 0', border: 'none', borderTop: '1px solid #e2e8f0' }} />
+                <h4 style={{ margin: '0 0 8px 0', color: '#475569', fontSize: '14px' }}>🎓 Education</h4>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 20px' }}>
+                  {candidate.college_name && (
+                    <p style={{ margin: '4px 0', color:'#1a202c'}}>
+                      <strong>College:</strong> {candidate.college_name}
+                    </p>
+                  )}
+                  {candidate.degree_course && (
+                    <p style={{ margin: '4px 0', color:'#1a202c'}}>
+                      <strong>Degree:</strong> {candidate.degree_course}
+                    </p>
+                  )}
+                  {candidate.graduation_year && (
+                    <p style={{ margin: '4px 0', color:'#1a202c'}}>
+                      <strong>Graduation Year:</strong> {candidate.graduation_year}
+                    </p>
+                  )}
+                </div>
+              </>
+            )}
+
+            {/* ===== ADDRESS & LINKS SECTION ===== */}
+            {(candidate.address || candidate.linkedin_profile || candidate.portfolio_link) && (
+              <>
+                <hr style={{ margin: '12px 0', border: 'none', borderTop: '1px solid #e2e8f0' }} />
+                <h4 style={{ margin: '0 0 8px 0', color: '#475569', fontSize: '14px' }}>📍 Address & Links</h4>
+                <div>
+                  {candidate.address && (
+                    <p style={{ margin: '4px 0', color:'#1a202c'}}>
+                      <strong>Address:</strong> {candidate.address}
+                    </p>
+                  )}
+                  {candidate.linkedin_profile && (
+                    <p style={{ margin: '4px 0', color:'#1a202c'}}>
+                      <strong>LinkedIn:</strong>{' '}
+                      <a 
+                        href={candidate.linkedin_profile} 
+                        target="_blank" 
+                        rel="noreferrer"
+                        style={{ color: '#2563eb', textDecoration: 'none' }}
+                        onMouseEnter={(e) => e.target.style.textDecoration = 'underline'}
+                        onMouseLeave={(e) => e.target.style.textDecoration = 'none'}
+                      >
+                        {candidate.linkedin_profile}
+                      </a>
+                    </p>
+                  )}
+                  {candidate.portfolio_link && (
+                    <p style={{ margin: '4px 0', color:'#1a202c'}}>
+                      <strong>Portfolio:</strong>{' '}
+                      <a 
+                        href={candidate.portfolio_link} 
+                        target="_blank" 
+                        rel="noreferrer"
+                        style={{ color: '#2563eb', textDecoration: 'none' }}
+                        onMouseEnter={(e) => e.target.style.textDecoration = 'underline'}
+                        onMouseLeave={(e) => e.target.style.textDecoration = 'none'}
+                      >
+                        {candidate.portfolio_link}
+                      </a>
+                    </p>
+                  )}
+                </div>
+              </>
+            )}
+
+            {/* Resume Download */}
+            <hr style={{ margin: '12px 0', border: 'none', borderTop: '1px solid #e2e8f0' }} />
+            <p style={{ margin: '8px 0', color:'#1a202c'}}>
               <strong>Resume:</strong> 
               {candidate.resume_link ? (
                 <button
@@ -1729,41 +1819,6 @@ Jarurat Care Foundation`;
                 <span style={{ marginLeft: '8px', color: '#94a3b8', fontStyle: 'italic' }}>Not Uploaded</span>
               )}
             </p>
-            
-            <p style={{ margin: '8px 0',color:'#1a202c'}}><strong>Domain:</strong> {candidate.domain}</p>
-            <p style={{ margin: '8px 0',color:'#1a202c'}}><strong>Source:</strong> {candidate.source}</p>
-            <p style={{ margin: '8px 0',color:'#1a202c'}}>
-              <strong>Stage: </strong> 
-              <span style={{ 
-                color: isOnWaitlist ? '#8b5cf6' : '#057b6e', 
-                fontWeight: '700',
-                backgroundColor: isOnWaitlist ? '#f5f3ff' : 'transparent',
-                padding: isOnWaitlist ? '2px 10px' : '0',
-                borderRadius: '4px'
-              }}>
-                {candidate.current_stage}
-              </span>
-            </p>
-            {/* ===== ADD PORTFOLIO LINK ===== */}
-{candidate.portfolio_link && (
-  <p style={{ margin: '8px 0', color:'#1a202c' }}>
-    <strong>Portfolio:</strong>{' '}
-    <a 
-      href={candidate.portfolio_link} 
-      target="_blank" 
-      rel="noreferrer"
-      style={{ 
-        color: '#2563eb', 
-        textDecoration: 'none',
-        fontWeight: '500'
-      }}
-      onMouseEnter={(e) => e.target.style.textDecoration = 'underline'}
-      onMouseLeave={(e) => e.target.style.textDecoration = 'none'}
-    >
-      {candidate.portfolio_link}
-    </a>
-  </p>
-)}
 
             {isOnWaitlist && candidate.waitlisted_at && (
               <p style={{ margin: '8px 0', fontSize: '13px', color: '#7c3aed' }}>
@@ -1991,7 +2046,7 @@ Jarurat Care Foundation`;
           </div>
         </div>
 
-        {/* RIGHT COLUMN */}
+        {/* RIGHT COLUMN - Workflow Workspace (unchanged) */}
         <div style={{ background: '#fff', padding: '24px', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0' }}>
           <h2 style={{ margin: '0 0 20px 0', color: '#0f172a', borderBottom: '2px solid #f1f5f9', paddingBottom: '10px', fontSize: '22px' }}>Workflow Workspace</h2>
           
@@ -2038,27 +2093,23 @@ Jarurat Care Foundation`;
               </button>
             </div>
           )}
-          {/* ===== ADD: Restore from On Hold Button with Logging ===== */}
+          
           {candidate.current_stage === 'On Hold' && (
             <div style={{ marginBottom: '20px' }}>
               <button
                 onClick={async () => {
-                  // Find the on-hold interview
                   const onHoldInterview = interviews.find(iv => iv.status === 'On Hold' && iv.result === 'On Hold');
                   
                   if (onHoldInterview) {
-                    // Resume the interview
                     await supabase.from('interviews').update({ 
                       status: 'Pending', 
                       result: 'Pending' 
                     }).eq('id', onHoldInterview.id);
                     
-                    // Restore candidate stage to 'Interview'
                     await supabase.from('candidates').update({ 
                       current_stage: 'Interview' 
                     }).eq('id', id);
 
-                    // ===== LOG ACTIVITY =====
                     await logTeamActivity(
                       'candidate_restored_from_on_hold',
                       'candidate',
@@ -2070,7 +2121,6 @@ Jarurat Care Foundation`;
                         round: onHoldInterview.round
                       }
                     );
-                    // ===== END LOG ACTIVITY =====
                     
                     alert('✅ Candidate restored from On Hold to Interview stage.');
                     fetchCompleteProfile();
@@ -2097,7 +2147,7 @@ Jarurat Care Foundation`;
               </p>
             </div>
           )}
-          {/* ===== END ADD ===== */}
+          
           {isOnWaitlist && (
             <div style={{ marginBottom: '20px' }}>
               <p style={{ fontSize: '12px', color: '#8b5cf6', textAlign: 'center', marginTop: '4px' }}>
@@ -2262,7 +2312,6 @@ Jarurat Care Foundation`;
                     </p>
                   )}
 
-                  {/* ✅ View Submission Details Button - Only show if there's a valid link OR files */}
                   {(hasValidLink || hasFiles) && (
                     <button
                       onClick={() => setShowFilesModal(true)}
@@ -2297,7 +2346,7 @@ Jarurat Care Foundation`;
             </div>
           )}
 
-          {/* Interview Section */}
+          {/* Interview Section - unchanged */}
           {candidate.current_stage === 'Interview' && (
             <div style={{ marginTop: '20px', borderTop: '2px solid #f1f5f9', paddingTop: '20px' }}>
               
@@ -2694,7 +2743,6 @@ Jarurat Care Foundation`;
                         current_stage: newStage 
                       }).eq('id', id);
 
-                      // ===== LOG ACTIVITY =====
                       if (actionType) {
                         await logTeamActivity(
                           actionType,
@@ -2708,7 +2756,6 @@ Jarurat Care Foundation`;
                           }
                         );
                       }
-                      // ===== END LOG ACTIVITY =====
 
                       alert(`Probation updated to: ${newProbationStatus}. Dashboard KPIs synced.`);
                       fetchCompleteProfile();
@@ -2846,7 +2893,7 @@ Jarurat Care Foundation`;
         </div>
       </div>
 
-      {/* ✅ Uploaded Files Modal - Shows only what was submitted */}
+      {/* Uploaded Files Modal */}
       {showFilesModal && (
         <div style={{
           position: 'fixed',
@@ -2888,7 +2935,6 @@ Jarurat Care Foundation`;
               </button>
             </div>
 
-            {/* ✅ Show Assignment Link ONLY if it's a valid URL (not a placeholder) */}
             {hasValidLink && (
               <div style={{
                 padding: '14px',
@@ -2916,7 +2962,6 @@ Jarurat Care Foundation`;
               </div>
             )}
 
-            {/* ✅ Show Files Section ONLY if files exist */}
             {hasFiles ? (
               <div>
                 <p style={{ margin: '0 0 12px 0', fontSize: '13px', fontWeight: '600', color: '#475569' }}>

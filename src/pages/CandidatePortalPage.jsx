@@ -23,12 +23,18 @@ export default function CandidatePortalPage() {
     referrer_contact: '',
     referrer_name: '',
     other_source: '',
-    portfolio_link: ''
+    portfolio_link: '',
+    address: '',
+    linkedin_profile: '',
+    college_name: '',
+    degree_course: '',
+    graduation_year: ''
   });
   
   // File upload states
   const [resumeFile, setResumeFile] = useState(null);
   const [uploading, setUploading] = useState(false);
+  const [formErrors, setFormErrors] = useState({});
 
   // Stage dependency sub-states
   const [assignment, setAssignment] = useState(null);
@@ -628,6 +634,32 @@ export default function CandidatePortalPage() {
     }
   }
 
+  // Validate form before submission
+  function validateForm() {
+    const errors = {};
+    
+    if (!regForm.name.trim()) errors.name = 'Full name is required';
+    if (!emailInput.trim()) errors.email = 'Email is required';
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailInput.trim())) errors.email = 'Please enter a valid email';
+    if (!regForm.phone.trim()) errors.phone = 'Contact number is required';
+    if (!regForm.domain) errors.domain = 'Please select a domain';
+    if (!regForm.source) errors.source = 'Please select a source';
+    if (!resumeFile) errors.resume = 'Please upload your resume';
+    if (!regForm.college_name.trim()) errors.college_name = 'College name is required';
+    if (!regForm.degree_course.trim()) errors.degree_course = 'Degree/Course is required';
+    if (!regForm.graduation_year) errors.graduation_year = 'Graduation year is required';
+    else if (parseInt(regForm.graduation_year) < 2000) errors.graduation_year = 'Must be 2000 or later';
+    if (!regForm.address.trim()) errors.address = 'Address is required';
+    if (regForm.source === 'Other' && !regForm.other_source.trim()) errors.other_source = 'Please specify your source';
+    if (regForm.source === 'Referral') {
+      if (!regForm.referrer_name.trim()) errors.referrer_name = 'Referrer name is required';
+      if (!regForm.referrer_contact.trim()) errors.referrer_contact = 'Referrer contact is required';
+    }
+    
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  }
+
   async function handleLogin(e) {
     e.preventDefault();
     setErrorMsg('');
@@ -650,48 +682,27 @@ export default function CandidatePortalPage() {
 
   async function handleRegister(e) {
     e.preventDefault();
-    setErrorMsg('');
+    setFormErrors({});
     
-    // Validate required fields
-    if (!regForm.name || !emailInput || !regForm.phone || !regForm.domain || !regForm.source) {
-      alert('Please fill out all required fields.');
+    // Validate all fields
+    if (!validateForm()) {
+      // Scroll to first error
+      const firstError = document.querySelector('.field-error');
+      if (firstError) firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
 
-    // Validate resume file
-    if (!resumeFile) {
-      alert('Please upload your resume (PDF format, max 100MB).');
-      return;
-    }
-
-    // Validate file before proceeding
-    if (!validateFile(resumeFile)) {
-      return;
-    }
-
-    // If source is 'Other', validate other_source
+    // If source is 'Other', get the final source
     let finalSource = regForm.source;
     if (regForm.source === 'Other') {
-      if (!regForm.other_source.trim()) {
-        alert('Please specify your source.');
-        return;
-      }
       finalSource = regForm.other_source.trim();
-    }
-
-    // Validate referrer details if source is Referral
-    if (regForm.source === 'Referral') {
-      if (!regForm.referrer_name || !regForm.referrer_contact) {
-        alert('Please enter both the referrer\'s name and contact number.');
-        return;
-      }
     }
 
     // Validate email
     const cleanEmail = emailInput.trim().toLowerCase();
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(cleanEmail)) {
-      alert('Please enter a valid email address.');
+      setFormErrors({ ...formErrors, email: 'Please enter a valid email address.' });
       return;
     }
 
@@ -708,15 +719,20 @@ export default function CandidatePortalPage() {
     try {
       // Step 1: Create the candidate record first
       const insertData = {
-        name: regForm.name,
+        name: regForm.name.trim(),
         email: cleanEmail,
-        phone: regForm.phone,
+        phone: regForm.phone.trim(),
         domain: regForm.domain,
         source: finalSource,
         current_stage: 'Applied',
         status: 'In_Progress',
         resume_review: 'Pending',
-        portfolio_link: regForm.portfolio_link || null
+        portfolio_link: regForm.portfolio_link || null,
+        address: regForm.address.trim() || null,
+        linkedin_profile: regForm.linkedin_profile || null,
+        college_name: regForm.college_name.trim() || null,
+        degree_course: regForm.degree_course.trim() || null,
+        graduation_year: regForm.graduation_year ? parseInt(regForm.graduation_year) : null
       };
 
       console.log("📝 Creating candidate with data:", insertData);
@@ -771,10 +787,10 @@ export default function CandidatePortalPage() {
           .from('referrals')
           .insert({
             candidate_id: newCand.id,
-            candidate_name: regForm.name,
+            candidate_name: regForm.name.trim(),
             candidate_email: cleanEmail,
-            referrer_name: regForm.referrer_name,
-            referrer_contact: regForm.referrer_contact,
+            referrer_name: regForm.referrer_name.trim(),
+            referrer_contact: regForm.referrer_contact.trim(),
             status: 'Pending'
           });
 
@@ -796,7 +812,12 @@ export default function CandidatePortalPage() {
         referrer_contact: '',
         referrer_name: '',
         other_source: '',
-        portfolio_link: ''
+        portfolio_link: '',
+        address: '',
+        linkedin_profile: '',
+        college_name: '',
+        degree_course: '',
+        graduation_year: ''
       });
       setResumeFile(null);
       setEmailInput('');
@@ -1022,263 +1043,347 @@ export default function CandidatePortalPage() {
   if (!candidate || isLoginPath) {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f0f4f8', padding: '20px', fontFamily: 'sans-serif' }}>
-        <div style={{ background: '#fff', width: '100%', maxWidth: '460px', padding: '40px', borderRadius: '16px', boxShadow: '0 10px 25px rgba(15, 23, 42, 0.08)', border: '1px solid #e2e8f0' }}>
-          <div style={{ textAlign: 'center', marginBottom: '30px' }}>
-            <h1 style={{ color: '#1e3a8a', fontSize: '26px', fontWeight: '800', margin: '0 0 8px 0' }}>Jarurat Care Foundation</h1>
-            <p style={{ color: '#64748b', fontSize: '15px', margin: 0 }}>Candidate Portal</p>
+        <div style={{ background: '#fff', width: '100%', maxWidth: '560px', padding: '32px 40px', borderRadius: '16px', boxShadow: '0 10px 25px rgba(15, 23, 42, 0.08)', border: '1px solid #e2e8f0' }}>
+          <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+            <h1 style={{ color: '#1e3a8a', fontSize: '24px', fontWeight: '800', margin: '0 0 4px 0' }}>Jarurat Care Foundation</h1>
+            <p style={{ color: '#64748b', fontSize: '14px', margin: 0 }}>Candidate Portal</p>
           </div>
-          {errorMsg && <div style={{ padding: '12px 16px', background: '#fef2f2', borderLeft: '4px solid #ef4444', color: '#991b1b', borderRadius: '6px', fontSize: '14px', marginBottom: '20px' }}>{errorMsg}</div>}
+          {errorMsg && <div style={{ padding: '10px 14px', background: '#fef2f2', borderLeft: '4px solid #ef4444', color: '#991b1b', borderRadius: '6px', fontSize: '13px', marginBottom: '16px' }}>{errorMsg}</div>}
           {!isRegistering ? (
             <form onSubmit={handleLogin}>
-              <div style={{ marginBottom: '20px' }}>
-                <label style={{ display: 'block', textAlign: 'left', fontSize: '13px', fontWeight: '600', color: '#475569', marginBottom: '6px' }}>Registered Email</label>
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', textAlign: 'left', fontSize: '13px', fontWeight: '600', color: '#475569', marginBottom: '4px' }}>Registered Email</label>
                 <input 
                   type="email" 
                   placeholder="Enter your registered email address" 
                   required 
                   value={emailInput} 
                   onChange={(e) => setEmailInput(e.target.value)} 
-                  style={{ width: '100%', padding: '12px 16px', boxSizing: 'border-box', border: '1px solid #cbd5e1', borderRadius: '8px', outline: 'none', fontSize: '15px', backgroundColor: '#fff', color: '#000', transition: 'border-color 0.2s' }}
+                  style={{ width: '100%', padding: '10px 14px', boxSizing: 'border-box', border: '1px solid #cbd5e1', borderRadius: '6px', outline: 'none', fontSize: '14px', backgroundColor: '#fff', color: '#000', transition: 'border-color 0.2s' }}
                   onFocus={(e) => e.target.style.borderColor = '#2563eb'}
                   onBlur={(e) => e.target.style.borderColor = '#cbd5e1'}
                 />
               </div>
-              <button type="submit" style={{ width: '100%', background: '#1e40af', color: '#fff', padding: '14px', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '15px', fontWeight: '600' }}>Login</button>
-              <p style={{ textAlign: 'center', marginTop: '20px', fontSize: '14px', color: '#64748b' }}>New Applicant? <span onClick={() => setIsRegistering(true)} style={{ color: '#2563eb', cursor: 'pointer', fontWeight: '600' }}>Register here</span></p>
+              <button type="submit" style={{ width: '100%', background: '#1e40af', color: '#fff', padding: '12px', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '14px', fontWeight: '600' }}>Login</button>
+              <p style={{ textAlign: 'center', marginTop: '16px', fontSize: '13px', color: '#64748b' }}>New Applicant? <span onClick={() => setIsRegistering(true)} style={{ color: '#2563eb', cursor: 'pointer', fontWeight: '600' }}>Register here</span></p>
             </form>
           ) : (
             <form onSubmit={handleRegister}>
-              <div style={{ marginBottom: '14px' }}>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#475569', marginBottom: '4px' }}>Full Name <span style={{ color: '#ef4444' }}>*</span></label>
-                <input 
-                  type="text" 
-                  placeholder="Enter your full name" 
-                  required 
-                  value={regForm.name} 
-                  onChange={(e) => setRegForm({...regForm, name: e.target.value})} 
-                  style={{ width: '100%', padding: '10px 14px', boxSizing: 'border-box', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '14px', backgroundColor: '#f8fafc', color: '#1e293b', transition: 'border-color 0.2s' }}
-                  onFocus={(e) => e.target.style.borderColor = '#2563eb'}
-                  onBlur={(e) => e.target.style.borderColor = '#cbd5e1'}
-                />
-              </div>
-              <div style={{ marginBottom: '14px' }}>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#475569', marginBottom: '4px' }}>Email ID <span style={{ color: '#ef4444' }}>*</span></label>
-                <input 
-                  type="email" 
-                  placeholder="Enter your email address" 
-                  required 
-                  value={emailInput} 
-                  onChange={(e) => setEmailInput(e.target.value)} 
-                  style={{ width: '100%', padding: '10px 14px', boxSizing: 'border-box', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '14px', backgroundColor: '#f8fafc', color: '#1e293b', transition: 'border-color 0.2s' }}
-                  onFocus={(e) => e.target.style.borderColor = '#2563eb'}
-                  onBlur={(e) => e.target.style.borderColor = '#cbd5e1'}
-                />
-              </div>
-              <div style={{ marginBottom: '14px' }}>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#475569', marginBottom: '4px' }}>Contact Number <span style={{ color: '#ef4444' }}>*</span></label>
-                <input 
-                  type="text" 
-                  placeholder="Enter your contact number" 
-                  required 
-                  value={regForm.phone} 
-                  onChange={(e) => setRegForm({...regForm, phone: e.target.value})} 
-                  style={{ width: '100%', padding: '10px 14px', boxSizing: 'border-box', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '14px', backgroundColor: '#f8fafc', color: '#1e293b', transition: 'border-color 0.2s' }}
-                  onFocus={(e) => e.target.style.borderColor = '#2563eb'}
-                  onBlur={(e) => e.target.style.borderColor = '#cbd5e1'}
-                />
-              </div>
-              <div style={{ marginBottom: '14px' }}>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#475569', marginBottom: '4px' }}>Domain <span style={{ color: '#ef4444' }}>*</span></label>
-                <select 
-                  required 
-                  value={regForm.domain} 
-                  onChange={(e) => setRegForm({...regForm, domain: e.target.value})} 
-                  style={{ width: '100%', padding: '10px 14px', border: '1px solid #cbd5e1', borderRadius: '6px', backgroundColor: '#f8fafc', fontSize: '14px', color: '#1e293b', transition: 'border-color 0.2s' }}
-                  onFocus={(e) => e.target.style.borderColor = '#2563eb'}
-                  onBlur={(e) => e.target.style.borderColor = '#cbd5e1'}
-                >
-                  <option value="">Select your preferred domain</option>
-                  {domains.length > 0 ? domains.map(d => <option key={d} value={d}>{d}</option>) : (
-                    <>
-                      <option value="Automation & Operations">Automation & Operations</option>
-                      <option value="Brand Management & Outreach">Brand Management & Outreach</option>
-                      <option value="Business Development">Business Development</option>
-                      <option value="Clinical Psychologist">Clinical Psychologist</option>
-                      <option value="Content Creation">Content Creation</option>
-                      <option value="Creative Design">Creative Design</option>
-                      <option value="Graphic Design">Graphic Design</option>
-                      <option value="HR Psychologist">HR Psychologist</option>
-                      <option value="Human Resources (HR)">Human Resources (HR)</option>
-                      <option value="Lead Generation">Lead Generation</option>
-                      <option value="Marketing">Marketing</option>
-                      <option value="Media & Public Relations (PR)">Media & Public Relations (PR)</option>
-                      <option value="Motion Graphics">Motion Graphics</option>
-                      <option value="Operations">Operations</option>
-                      <option value="Project Management">Project Management</option>
-                      <option value="Python Automation">Python Automation</option>
-                      <option value="Sales and Marketing">Sales and Marketing</option>
-                      <option value="Social Media Management">Social Media Management</option>
-                      <option value="Talent Acquisition">Talent Acquisition</option>
-                      <option value="Video Editing/Making">Video Editing/Making</option>
-                      <option value="UI/UX Design">UI/UX Design</option>
-                      <option value="Full stack Developer">Full stack Developer</option>
-                    </>
-                  )}
-                </select>
-              </div>
-              <div style={{ marginBottom: '14px' }}>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#475569', marginBottom: '4px' }}>Source <span style={{ color: '#ef4444' }}>*</span></label>
-                <select 
-                  required 
-                  value={regForm.source} 
-                  onChange={(e) => {
-                    setRegForm({...regForm, source: e.target.value});
-                    if (e.target.value !== 'Referral' && e.target.value !== 'Other') {
-                      setRegForm(prev => ({...prev, source: e.target.value, referrer_contact: '', referrer_name: '', other_source: ''}));
-                    }
-                  }} 
-                  style={{ width: '100%', padding: '10px 14px', border: '1px solid #cbd5e1', borderRadius: '6px', backgroundColor: '#f8fafc', fontSize: '14px', color: '#1e293b', transition: 'border-color 0.2s' }}
-                  onFocus={(e) => e.target.style.borderColor = '#2563eb'}
-                  onBlur={(e) => e.target.style.borderColor = '#cbd5e1'}
-                >
-                  <option value="">Select</option>
-                  <option value="Internshala">Internshala</option>
-                  <option value="Referral">Referral</option>
-                  <option value="Wellfound">Wellfound</option>
-                  <option value="Indeed">Indeed</option>
-                  <option value="College Outreach">College Outreach</option>
-                  <option value="Social Media">Social Media</option>
-                  <option value="Other">Other</option>
-                </select>
-              </div>
-
-              {/* Other Source Input */}
-              {regForm.source === 'Other' && (
-                <div style={{ marginBottom: '14px', animation: 'fadeIn 0.3s ease' }}>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#475569', marginBottom: '4px' }}>
-                    Please specify your source <span style={{ color: '#ef4444' }}>*</span>
-                  </label>
-                  <input 
-                    type="text" 
-                    placeholder="Please enter your source." 
-                    required 
-                    value={regForm.other_source} 
-                    onChange={(e) => setRegForm({...regForm, other_source: e.target.value})} 
-                    style={{ width: '100%', padding: '10px 14px', boxSizing: 'border-box', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '14px', backgroundColor: '#f8fafc', color: '#1e293b', transition: 'border-color 0.2s' }}
-                    onFocus={(e) => e.target.style.borderColor = '#2563eb'}
-                    onBlur={(e) => e.target.style.borderColor = '#cbd5e1'}
-                  />
+              {/* SECTION 1: Personal Information */}
+              <div style={{ marginBottom: '16px' }}>
+                <h3 style={{ fontSize: '13px', fontWeight: '700', color: '#1e3a8a', margin: '0 0 12px 0', borderBottom: '2px solid #e2e8f0', paddingBottom: '6px' }}>👤 Personal Information</h3>
+                
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 14px' }}>
+                  <div style={{ marginBottom: '10px' }}>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '3px' }}>Full Name <span style={{ color: '#ef4444' }}>*</span></label>
+                    <input 
+                      type="text" 
+                      placeholder="Enter your full name" 
+                      value={regForm.name} 
+                      onChange={(e) => setRegForm({...regForm, name: e.target.value})} 
+                      style={{ width: '100%', padding: '8px 12px', boxSizing: 'border-box', border: formErrors.name ? '1px solid #ef4444' : '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13px', backgroundColor: '#f8fafc', color: '#1e293b' }}
+                      onFocus={(e) => e.target.style.borderColor = '#2563eb'}
+                      onBlur={(e) => e.target.style.borderColor = '#cbd5e1'}
+                    />
+                    {formErrors.name && <span style={{ fontSize: '11px', color: '#ef4444' }}>{formErrors.name}</span>}
+                  </div>
+                  
+                  <div style={{ marginBottom: '10px' }}>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '3px' }}>Email ID <span style={{ color: '#ef4444' }}>*</span></label>
+                    <input 
+                      type="email" 
+                      placeholder="Enter your email" 
+                      value={emailInput} 
+                      onChange={(e) => setEmailInput(e.target.value)} 
+                      style={{ width: '100%', padding: '8px 12px', boxSizing: 'border-box', border: formErrors.email ? '1px solid #ef4444' : '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13px', backgroundColor: '#f8fafc', color: '#1e293b' }}
+                      onFocus={(e) => e.target.style.borderColor = '#2563eb'}
+                      onBlur={(e) => e.target.style.borderColor = '#cbd5e1'}
+                    />
+                    {formErrors.email && <span style={{ fontSize: '11px', color: '#ef4444' }}>{formErrors.email}</span>}
+                  </div>
                 </div>
-              )}
 
-              {/* Referral Details */}
-              {regForm.source === 'Referral' && (
-                <>
-                  <div style={{ marginBottom: '14px', animation: 'fadeIn 0.3s ease' }}>
-                    <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#475569', marginBottom: '4px' }}>
-                      Referrer's Name <span style={{ color: '#ef4444' }}>*</span>
-                    </label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 14px' }}>
+                  <div style={{ marginBottom: '10px' }}>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '3px' }}>Contact Number <span style={{ color: '#ef4444' }}>*</span></label>
                     <input 
                       type="text" 
-                      placeholder="Enter referrer's full name" 
-                      required 
-                      value={regForm.referrer_name} 
-                      onChange={(e) => setRegForm({...regForm, referrer_name: e.target.value})} 
-                      style={{ width: '100%', padding: '10px 14px', boxSizing: 'border-box', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '14px', backgroundColor: '#f8fafc', color: '#1e293b', transition: 'border-color 0.2s' }}
+                      placeholder="Enter contact number" 
+                      value={regForm.phone} 
+                      onChange={(e) => setRegForm({...regForm, phone: e.target.value})} 
+                      style={{ width: '100%', padding: '8px 12px', boxSizing: 'border-box', border: formErrors.phone ? '1px solid #ef4444' : '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13px', backgroundColor: '#f8fafc', color: '#1e293b' }}
                       onFocus={(e) => e.target.style.borderColor = '#2563eb'}
                       onBlur={(e) => e.target.style.borderColor = '#cbd5e1'}
                     />
+                    {formErrors.phone && <span style={{ fontSize: '11px', color: '#ef4444' }}>{formErrors.phone}</span>}
                   </div>
-                  <div style={{ marginBottom: '14px', animation: 'fadeIn 0.3s ease' }}>
-                    <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#475569', marginBottom: '4px' }}>
-                      Referrer's Contact Number <span style={{ color: '#ef4444' }}>*</span>
-                    </label>
-                    <input 
-                      type="text" 
-                      placeholder="Enter referrer's contact number" 
-                      required 
-                      value={regForm.referrer_contact} 
-                      onChange={(e) => setRegForm({...regForm, referrer_contact: e.target.value})} 
-                      style={{ width: '100%', padding: '10px 14px', boxSizing: 'border-box', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '14px', backgroundColor: '#f8fafc', color: '#1e293b', transition: 'border-color 0.2s' }}
-                      onFocus={(e) => e.target.style.borderColor = '#2563eb'}
-                      onBlur={(e) => e.target.style.borderColor = '#cbd5e1'}
-                    />
+                  
+                  <div style={{ marginBottom: '10px' }}>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '3px' }}>Domain <span style={{ color: '#ef4444' }}>*</span></label>
+                    <select 
+                      value={regForm.domain} 
+                      onChange={(e) => setRegForm({...regForm, domain: e.target.value})} 
+                      style={{ width: '100%', padding: '8px 12px', border: formErrors.domain ? '1px solid #ef4444' : '1px solid #cbd5e1', borderRadius: '6px', backgroundColor: '#f8fafc', fontSize: '13px', color: '#1e293b' }}
+                    >
+                      <option value="">Select domain</option>
+                      {domains.length > 0 ? domains.map(d => <option key={d} value={d}>{d}</option>) : (
+                        <>
+                          <option value="Automation & Operations">Automation & Operations</option>
+                          <option value="Brand Management & Outreach">Brand Management & Outreach</option>
+                          <option value="Business Development">Business Development</option>
+                          <option value="Clinical Psychologist">Clinical Psychologist</option>
+                          <option value="Content Creation">Content Creation</option>
+                          <option value="Creative Design">Creative Design</option>
+                          <option value="Graphic Design">Graphic Design</option>
+                          <option value="HR Psychologist">HR Psychologist</option>
+                          <option value="Human Resources (HR)">Human Resources (HR)</option>
+                          <option value="Lead Generation">Lead Generation</option>
+                          <option value="Marketing">Marketing</option>
+                          <option value="Media & Public Relations (PR)">Media & Public Relations (PR)</option>
+                          <option value="Motion Graphics">Motion Graphics</option>
+                          <option value="Operations">Operations</option>
+                          <option value="Project Management">Project Management</option>
+                          <option value="Python Automation">Python Automation</option>
+                          <option value="Sales and Marketing">Sales and Marketing</option>
+                          <option value="Social Media Management">Social Media Management</option>
+                          <option value="Talent Acquisition">Talent Acquisition</option>
+                          <option value="Video Editing/Making">Video Editing/Making</option>
+                          <option value="UI/UX Design">UI/UX Design</option>
+                          <option value="Full stack Developer">Full stack Developer</option>
+                        </>
+                      )}
+                    </select>
+                    {formErrors.domain && <span style={{ fontSize: '11px', color: '#ef4444' }}>{formErrors.domain}</span>}
                   </div>
-                </>
-              )}
+                </div>
 
-              {/* Resume File Upload - Simplified */}
-              <div style={{ marginBottom: '14px' }}>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#475569', marginBottom: '4px' }}>
-                  Resume (PDF only, max 100MB) <span style={{ color: '#ef4444' }}>*</span>
-                </label>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                  <label style={{
-                    display: 'inline-block',
-                    padding: '8px 16px',
-                    background: '#2563eb',
-                    color: '#fff',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                    fontWeight: '500',
-                    border: 'none'
-                  }}>
-                    Choose File
-                    <input 
-                      type="file" 
-                      accept=".pdf,application/pdf" 
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 14px' }}>
+                  <div style={{ marginBottom: '10px' }}>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '3px' }}>Source <span style={{ color: '#ef4444' }}>*</span></label>
+                    <select 
+                      value={regForm.source} 
                       onChange={(e) => {
-                        if (e.target.files.length > 0 && validateFile(e.target.files[0])) {
-                          setResumeFile(e.target.files[0]);
+                        setRegForm({...regForm, source: e.target.value});
+                        if (e.target.value !== 'Referral' && e.target.value !== 'Other') {
+                          setRegForm(prev => ({...prev, source: e.target.value, referrer_contact: '', referrer_name: '', other_source: ''}));
                         }
-                        e.target.value = '';
                       }} 
-                      style={{ display: 'none' }} 
-                    />
-                  </label>
-                  {resumeFile ? (
-                    <span style={{ fontSize: '14px', color: '#059669', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                      <span>📄 {resumeFile.name} ({(resumeFile.size / 1024 / 1024).toFixed(2)} MB)</span>
-                      <button 
-                        type="button"
-                        onClick={() => setResumeFile(null)}
-                        style={{
-                          padding: '2px 10px',
-                          background: '#fee2e2',
-                          color: '#dc2626',
-                          border: 'none',
-                          borderRadius: '4px',
-                          cursor: 'pointer',
-                          fontSize: '12px'
-                        }}
-                      >
-                        Remove
-                      </button>
-                    </span>
-                  ) : (
-                    <span style={{ fontSize: '14px', color: '#94a3b8' }}>No file chosen</span>
+                      style={{ width: '100%', padding: '8px 12px', border: formErrors.source ? '1px solid #ef4444' : '1px solid #cbd5e1', borderRadius: '6px', backgroundColor: '#f8fafc', fontSize: '13px', color: '#1e293b' }}
+                    >
+                      <option value="">Select source</option>
+                      <option value="Internshala">Internshala</option>
+                      <option value="Referral">Referral</option>
+                      <option value="Wellfound">Wellfound</option>
+                      <option value="Indeed">Indeed</option>
+                      <option value="College Outreach">College Outreach</option>
+                      <option value="Social Media">Social Media</option>
+                      <option value="Other">Other</option>
+                    </select>
+                    {formErrors.source && <span style={{ fontSize: '11px', color: '#ef4444' }}>{formErrors.source}</span>}
+                  </div>
+
+                  {/* Other Source Input */}
+                  {regForm.source === 'Other' && (
+                    <div style={{ marginBottom: '10px' }}>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '3px' }}>Specify Source <span style={{ color: '#ef4444' }}>*</span></label>
+                      <input 
+                        type="text" 
+                        placeholder="Enter your source" 
+                        value={regForm.other_source} 
+                        onChange={(e) => setRegForm({...regForm, other_source: e.target.value})} 
+                        style={{ width: '100%', padding: '8px 12px', boxSizing: 'border-box', border: formErrors.other_source ? '1px solid #ef4444' : '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13px', backgroundColor: '#f8fafc', color: '#1e293b' }}
+                      />
+                      {formErrors.other_source && <span style={{ fontSize: '11px', color: '#ef4444' }}>{formErrors.other_source}</span>}
+                    </div>
                   )}
                 </div>
-                {uploading && (
-                  <p style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>
-                    ⏳ Uploading...
-                  </p>
-                )}
               </div>
 
-              <div style={{ marginBottom: '20px' }}>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#475569', marginBottom: '4px' }}>Portfolio Link <span style={{ color: '#94a3b8', fontSize: '11px' }}>(Optional)</span></label>
-                <input 
-                  type="url" 
-                  placeholder="Please enter your portfolio link" 
-                  value={regForm.portfolio_link} 
-                  onChange={(e) => setRegForm({...regForm, portfolio_link: e.target.value})} 
-                  style={{ width: '100%', padding: '10px 14px', boxSizing: 'border-box', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '14px', backgroundColor: '#f8fafc', color: '#1e293b', transition: 'border-color 0.2s' }}
-                  onFocus={(e) => e.target.style.borderColor = '#2563eb'}
-                  onBlur={(e) => e.target.style.borderColor = '#cbd5e1'}
-                />
+              {/* SECTION 2: Education */}
+              <div style={{ marginBottom: '16px' }}>
+                <h3 style={{ fontSize: '13px', fontWeight: '700', color: '#1e3a8a', margin: '0 0 12px 0', borderBottom: '2px solid #e2e8f0', paddingBottom: '6px' }}>🎓 Education Details</h3>
+                
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 14px' }}>
+                  <div style={{ marginBottom: '10px' }}>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '3px' }}>College/University <span style={{ color: '#ef4444' }}>*</span></label>
+                    <input 
+                      type="text" 
+                      placeholder="College name" 
+                      value={regForm.college_name} 
+                      onChange={(e) => setRegForm({...regForm, college_name: e.target.value})} 
+                      style={{ width: '100%', padding: '8px 12px', boxSizing: 'border-box', border: formErrors.college_name ? '1px solid #ef4444' : '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13px', backgroundColor: '#f8fafc', color: '#1e293b' }}
+                    />
+                    {formErrors.college_name && <span style={{ fontSize: '11px', color: '#ef4444' }}>{formErrors.college_name}</span>}
+                  </div>
+                  
+                  <div style={{ marginBottom: '10px' }}>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '3px' }}>Degree/Course <span style={{ color: '#ef4444' }}>*</span></label>
+                    <input 
+                      type="text" 
+                      placeholder="e.g., B.Tech, MBA" 
+                      value={regForm.degree_course} 
+                      onChange={(e) => setRegForm({...regForm, degree_course: e.target.value})} 
+                      style={{ width: '100%', padding: '8px 12px', boxSizing: 'border-box', border: formErrors.degree_course ? '1px solid #ef4444' : '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13px', backgroundColor: '#f8fafc', color: '#1e293b' }}
+                    />
+                    {formErrors.degree_course && <span style={{ fontSize: '11px', color: '#ef4444' }}>{formErrors.degree_course}</span>}
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 14px' }}>
+                  <div style={{ marginBottom: '10px' }}>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '3px' }}>Graduation Year <span style={{ color: '#ef4444' }}>*</span></label>
+                    <input 
+                      type="number" 
+                      placeholder="e.g., 2024" 
+                      value={regForm.graduation_year} 
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (value === '') {
+                          setRegForm({...regForm, graduation_year: ''});
+                        } else {
+                          const num = parseInt(value);
+                          if (num >= 2000) {
+                            setRegForm({...regForm, graduation_year: value});
+                          }
+                        }
+                      }} 
+                      min="2000"
+                      style={{ width: '100%', padding: '8px 12px', boxSizing: 'border-box', border: formErrors.graduation_year ? '1px solid #ef4444' : '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13px', backgroundColor: '#f8fafc', color: '#1e293b' }}
+                    />
+                    {formErrors.graduation_year && <span style={{ fontSize: '11px', color: '#ef4444' }}>{formErrors.graduation_year}</span>}
+                  </div>
+                  
+                  <div style={{ marginBottom: '10px' }}>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '3px' }}>Address <span style={{ color: '#ef4444' }}>*</span></label>
+                    <input 
+                      type="text" 
+                      placeholder="Address (include pincode)" 
+                      value={regForm.address} 
+                      onChange={(e) => setRegForm({...regForm, address: e.target.value})} 
+                      style={{ width: '100%', padding: '8px 12px', boxSizing: 'border-box', border: formErrors.address ? '1px solid #ef4444' : '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13px', backgroundColor: '#f8fafc', color: '#1e293b' }}
+                    />
+                    {formErrors.address && <span style={{ fontSize: '11px', color: '#ef4444' }}>{formErrors.address}</span>}
+                  </div>
+                </div>
               </div>
+
+              {/* SECTION 3: Resume & Links */}
+              <div style={{ marginBottom: '16px' }}>
+                <h3 style={{ fontSize: '13px', fontWeight: '700', color: '#1e3a8a', margin: '0 0 12px 0', borderBottom: '2px solid #e2e8f0', paddingBottom: '6px' }}>📄 Resume & Links</h3>
+                
+                <div style={{ marginBottom: '10px' }}>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '3px' }}>Resume (PDF only, max 100MB) <span style={{ color: '#ef4444' }}>*</span></label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                    <label style={{
+                      display: 'inline-block',
+                      padding: '6px 14px',
+                      background: '#2563eb',
+                      color: '#fff',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      fontSize: '13px',
+                      fontWeight: '500',
+                      border: 'none'
+                    }}>
+                      Choose File
+                      <input 
+                        type="file" 
+                        accept=".pdf,application/pdf" 
+                        onChange={(e) => {
+                          if (e.target.files.length > 0 && validateFile(e.target.files[0])) {
+                            setResumeFile(e.target.files[0]);
+                            setFormErrors({...formErrors, resume: ''});
+                          }
+                          e.target.value = '';
+                        }} 
+                        style={{ display: 'none' }} 
+                      />
+                    </label>
+                    {resumeFile ? (
+                      <span style={{ fontSize: '13px', color: '#059669', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span>📄 {resumeFile.name} ({(resumeFile.size / 1024 / 1024).toFixed(2)} MB)</span>
+                        <button 
+                          type="button"
+                          onClick={() => setResumeFile(null)}
+                          style={{
+                            padding: '1px 8px',
+                            background: '#fee2e2',
+                            color: '#dc2626',
+                            border: 'none',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '11px'
+                          }}
+                        >
+                          Remove
+                        </button>
+                      </span>
+                    ) : (
+                      <span style={{ fontSize: '13px', color: '#94a3b8' }}>No file chosen</span>
+                    )}
+                  </div>
+                  {formErrors.resume && <span style={{ fontSize: '11px', color: '#ef4444' }}>{formErrors.resume}</span>}
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 14px' }}>
+                  <div style={{ marginBottom: '10px' }}>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '3px' }}>LinkedIn Profile</label>
+                    <input 
+                      type="url" 
+                      placeholder="linkedin.com/in/yourprofile" 
+                      value={regForm.linkedin_profile} 
+                      onChange={(e) => setRegForm({...regForm, linkedin_profile: e.target.value})} 
+                      style={{ width: '100%', padding: '8px 12px', boxSizing: 'border-box', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13px', backgroundColor: '#f8fafc', color: '#1e293b' }}
+                    />
+                  </div>
+                  
+                  <div style={{ marginBottom: '10px' }}>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '3px' }}>Portfolio Link</label>
+                    <input 
+                      type="url" 
+                      placeholder="Your portfolio URL" 
+                      value={regForm.portfolio_link} 
+                      onChange={(e) => setRegForm({...regForm, portfolio_link: e.target.value})} 
+                      style={{ width: '100%', padding: '8px 12px', boxSizing: 'border-box', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13px', backgroundColor: '#f8fafc', color: '#1e293b' }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Referral Details (conditional) */}
+              {regForm.source === 'Referral' && (
+                <div style={{ marginBottom: '16px', background: '#f0fdf4', padding: '12px 14px', borderRadius: '6px', border: '1px solid #bbf7d0' }}>
+                  <h4 style={{ fontSize: '12px', fontWeight: '700', color: '#065f46', margin: '0 0 8px 0' }}>🤝 Referral Details</h4>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 12px' }}>
+                    <div style={{ marginBottom: '6px' }}>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', color: '#475569', marginBottom: '2px' }}>Referrer's Name <span style={{ color: '#ef4444' }}>*</span></label>
+                      <input 
+                        type="text" 
+                        placeholder="Referrer name" 
+                        value={regForm.referrer_name} 
+                        onChange={(e) => setRegForm({...regForm, referrer_name: e.target.value})} 
+                        style={{ width: '100%', padding: '6px 10px', boxSizing: 'border-box', border: formErrors.referrer_name ? '1px solid #ef4444' : '1px solid #cbd5e1', borderRadius: '4px', fontSize: '13px', backgroundColor: '#fff', color: '#1e293b' }}
+                      />
+                      {formErrors.referrer_name && <span style={{ fontSize: '10px', color: '#ef4444' }}>{formErrors.referrer_name}</span>}
+                    </div>
+                    <div style={{ marginBottom: '6px' }}>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', color: '#475569', marginBottom: '2px' }}>Referrer's Contact <span style={{ color: '#ef4444' }}>*</span></label>
+                      <input 
+                        type="text" 
+                        placeholder="Referrer contact" 
+                        value={regForm.referrer_contact} 
+                        onChange={(e) => setRegForm({...regForm, referrer_contact: e.target.value})} 
+                        style={{ width: '100%', padding: '6px 10px', boxSizing: 'border-box', border: formErrors.referrer_contact ? '1px solid #ef4444' : '1px solid #cbd5e1', borderRadius: '4px', fontSize: '13px', backgroundColor: '#fff', color: '#1e293b' }}
+                      />
+                      {formErrors.referrer_contact && <span style={{ fontSize: '10px', color: '#ef4444' }}>{formErrors.referrer_contact}</span>}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {uploading && (
+                <p style={{ fontSize: '12px', color: '#64748b', textAlign: 'center' }}>⏳ Uploading...</p>
+              )}
 
               <button 
                 type="submit" 
@@ -1290,7 +1395,7 @@ export default function CandidatePortalPage() {
                   padding: '12px', 
                   border: 'none', 
                   borderRadius: '6px', 
-                  fontSize: '15px', 
+                  fontSize: '14px', 
                   fontWeight: '600', 
                   cursor: uploading ? 'not-allowed' : 'pointer' 
                 }}
@@ -1299,7 +1404,7 @@ export default function CandidatePortalPage() {
               >
                 {uploading ? 'Uploading...' : 'Register'}
               </button>
-              <p style={{ textAlign: 'center', marginTop: '16px', fontSize: '13px', color: '#64748b' }}>Already registered? <span onClick={() => setIsRegistering(false)} style={{ color: '#2563eb', cursor: 'pointer', fontWeight: '600' }}>Return to Login</span></p>
+              <p style={{ textAlign: 'center', marginTop: '12px', fontSize: '13px', color: '#64748b' }}>Already registered? <span onClick={() => setIsRegistering(false)} style={{ color: '#2563eb', cursor: 'pointer', fontWeight: '600' }}>Return to Login</span></p>
             </form>
           )}
         </div>
@@ -1807,11 +1912,11 @@ export default function CandidatePortalPage() {
                           </div>
                           
                           <p style={{ margin: '4px 0', fontSize: '14px', color: '#1a202c' }}>
-  <strong>Date:</strong> {formattedDate}
-</p>
-<p style={{ margin: '4px 0', fontSize: '14px', color: '#1a202c' }}>
-  <strong>Time Slot:</strong> {timeSlot || formatTimeIST(iv.scheduled_date_time)}
-</p>
+                            <strong>Date:</strong> {formattedDate}
+                          </p>
+                          <p style={{ margin: '4px 0', fontSize: '14px', color: '#1a202c' }}>
+                            <strong>Time Slot:</strong> {timeSlot || formatTimeIST(iv.scheduled_date_time)}
+                          </p>
                           
                           {iv.result === 'Rejected' && (
                             <div style={{ background: '#fef2f2', color: '#991b1b', padding: '10px', borderRadius: '6px', marginTop: '10px', textAlign: 'center', fontWeight: '500' }}>
