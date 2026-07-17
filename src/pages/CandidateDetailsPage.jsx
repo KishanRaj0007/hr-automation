@@ -27,6 +27,34 @@ const DOMAIN_ASSIGNMENT_LINKS = {
   "Full stack Developer": "https://docs.google.com/document/d/1ksB6T-I1nUd49ENcaECLPh6aKlYFx4wyBTk1Tp5tDmg/edit?usp=sharing"
 };
 
+// ===== HELPER: Format IST Date =====
+function formatIST(dateString) {
+  if (!dateString) return '';
+  try {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return '';
+    return date.toLocaleString('en-IN', { 
+      timeZone: 'Asia/Kolkata',
+      year: 'numeric',
+      month: 'numeric',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true
+    });
+  } catch (e) {
+    return dateString;
+  }
+}
+
+// ===== HELPER: Get IST Date =====
+function getISTDate() {
+  const now = new Date();
+  const istOffset = 5.5 * 60 * 60 * 1000;
+  return new Date(now.getTime() + istOffset);
+}
+
 // ===== ACTIVITY LOGGING HELPER =====
 async function logTeamActivity(action, entityType, entityId, details = {}) {
   const hrUser = localStorage.getItem('hrEmail') || 'system';
@@ -572,6 +600,21 @@ function CandidateDetailsPage() {
     const restoreStage = candidate.current_stage;
 
     try {
+      // ===== FIX: Store timestamp in IST =====
+      const istDate = getISTDate();
+      const istTimestamp = istDate.toISOString();
+      const istFormatted = istDate.toLocaleString('en-IN', { 
+        timeZone: 'Asia/Kolkata',
+        year: 'numeric',
+        month: 'numeric',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true
+      });
+      // ===== END FIX =====
+
       const { error } = await supabase
         .from('candidates')
         .update({ 
@@ -579,11 +622,11 @@ function CandidateDetailsPage() {
           waitlist_restore_stage: restoreStage,
           waitlist_reason: waitlistReason.trim(),
           waitlist_notes: waitlistNotes.trim() || null,
-          waitlisted_at: new Date().toISOString(),
+          waitlisted_at: istTimestamp,
           waitlist_status: 'Active',
           hr_notes: candidate.hr_notes 
-            ? `${candidate.hr_notes}\n\n[WAITLISTED] ${new Date().toLocaleString()}: ${waitlistReason.trim()}`
-            : `[WAITLISTED] ${new Date().toLocaleString()}: ${waitlistReason.trim()}`
+            ? `${candidate.hr_notes}\n\n[WAITLISTED] ${istFormatted}: ${waitlistReason.trim()}`
+            : `[WAITLISTED] ${istFormatted}: ${waitlistReason.trim()}`
         })
         .eq('id', id);
 
@@ -601,7 +644,8 @@ function CandidateDetailsPage() {
           candidate_id: id,
           candidate_name: candidate.name || candidate.full_name,
           reason: waitlistReason.trim(),
-          restore_stage: restoreStage
+          restore_stage: restoreStage,
+          waitlisted_at: istFormatted
         }
       );
       // ===== END LOG ACTIVITY =====
@@ -676,15 +720,27 @@ Jarurat Care Foundation`;
     }
 
     try {
+      const istDate = getISTDate();
+      const istFormatted = istDate.toLocaleString('en-IN', { 
+        timeZone: 'Asia/Kolkata',
+        year: 'numeric',
+        month: 'numeric',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true
+      });
+
       const { error } = await supabase
         .from('candidates')
         .update({ 
           current_stage: candidate.waitlist_restore_stage,
           waitlist_status: 'Restored',
-          waitlist_restored_at: new Date().toISOString(),
+          waitlist_restored_at: istDate.toISOString(),
           hr_notes: candidate.hr_notes 
-            ? `${candidate.hr_notes}\n\n[RESTORED FROM WAITLIST] ${new Date().toLocaleString()}`
-            : `[RESTORED FROM WAITLIST] ${new Date().toLocaleString()}`
+            ? `${candidate.hr_notes}\n\n[RESTORED FROM WAITLIST] ${istFormatted}`
+            : `[RESTORED FROM WAITLIST] ${istFormatted}`
         })
         .eq('id', id);
 
@@ -701,7 +757,8 @@ Jarurat Care Foundation`;
         {
           candidate_id: id,
           candidate_name: candidate.name || candidate.full_name,
-          restored_stage: candidate.waitlist_restore_stage
+          restored_stage: candidate.waitlist_restore_stage,
+          restored_at: istFormatted
         }
       );
       // ===== END LOG ACTIVITY =====
@@ -1084,44 +1141,44 @@ Jarurat Care Foundation`;
   }
 
   async function handleScheduleProbationMeeting() {
-  if (!probationInput.date || !probationInput.startTime || !probationInput.endTime || !probationInput.link) {
-    alert("Please specify the date, start time, end time, and meeting link for the probation meeting.");
-    return;
-  }
+    if (!probationInput.date || !probationInput.startTime || !probationInput.endTime || !probationInput.link) {
+      alert("Please specify the date, start time, end time, and meeting link for the probation meeting.");
+      return;
+    }
 
-  if (probationInput.startTime >= probationInput.endTime) {
-    alert("End time must be after start time.");
-    return;
-  }
+    if (probationInput.startTime >= probationInput.endTime) {
+      alert("End time must be after start time.");
+      return;
+    }
 
-  const dateStr = probationInput.date;
-  const startTimeStr = probationInput.startTime;
-  const endTimeStr = probationInput.endTime;
-  
-  const startDateTime = new Date(`${dateStr}T${startTimeStr}:00+05:30`);
-  const endDateTime = new Date(`${dateStr}T${endTimeStr}:00+05:30`);
-  
-  const startISO = startDateTime.toISOString();
-  const endISO = endDateTime.toISOString();
+    const dateStr = probationInput.date;
+    const startTimeStr = probationInput.startTime;
+    const endTimeStr = probationInput.endTime;
+    
+    const startDateTime = new Date(`${dateStr}T${startTimeStr}:00+05:30`);
+    const endDateTime = new Date(`${dateStr}T${endTimeStr}:00+05:30`);
+    
+    const startISO = startDateTime.toISOString();
+    const endISO = endDateTime.toISOString();
 
-  const { error } = await supabase
-    .from('onboarding')
-    .update({
-      probation_meeting_date: startISO,
-      probation_meeting_end: endISO,
-      probation_meeting_link: probationInput.link,
-      probation_meeting_scheduled: true
-    })
-    .eq('candidate_id', id);
+    const { error } = await supabase
+      .from('onboarding')
+      .update({
+        probation_meeting_date: startISO,
+        probation_meeting_end: endISO,
+        probation_meeting_link: probationInput.link,
+        probation_meeting_scheduled: true
+      })
+      .eq('candidate_id', id);
 
-  if (error) {
-    alert(`❌ Failed to schedule probation meeting: ${error.message}`);
-    console.error("Supabase Error:", error);
-    return;
-  }
+    if (error) {
+      alert(`❌ Failed to schedule probation meeting: ${error.message}`);
+      console.error("Supabase Error:", error);
+      return;
+    }
 
-  const timeSlotDisplay = `${formatTimeForDisplay(startTimeStr)} - ${formatTimeForDisplay(endTimeStr)}`;
-  const probationMessage = `Dear ${candidate.name || 'Candidate'},
+    const timeSlotDisplay = `${formatTimeForDisplay(startTimeStr)} - ${formatTimeForDisplay(endTimeStr)}`;
+    const probationMessage = `Dear ${candidate.name || 'Candidate'},
 
 Your probation meeting has been scheduled.
 
@@ -1136,61 +1193,61 @@ Best regards,
 HR Team
 Jarurat Care Foundation`;
 
-  const { error: questionError } = await supabase
-    .from('candidate_questions')
-    .insert({
-      candidate_id: id,
-      candidate_name: candidate.name || candidate.full_name,
-      candidate_email: candidate.email,
-      question: `📅 Probation Meeting Scheduled`,
-      status: 'Replied',
-      is_public: false,
-      is_system_message: true,
-      created_at: new Date().toISOString()
-    });
-
-  if (!questionError) {
-    const { data: questionData } = await supabase
+    const { error: questionError } = await supabase
       .from('candidate_questions')
-      .select('id')
-      .eq('candidate_id', id)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .single();
+      .insert({
+        candidate_id: id,
+        candidate_name: candidate.name || candidate.full_name,
+        candidate_email: candidate.email,
+        question: `📅 Probation Meeting Scheduled`,
+        status: 'Replied',
+        is_public: false,
+        is_system_message: true,
+        created_at: new Date().toISOString()
+      });
 
-    if (questionData) {
-      await supabase
-        .from('question_replies')
-        .insert({
-          question_id: questionData.id,
-          reply: probationMessage,
-          replied_by: 'Jarurat Care Foundation',
-          is_hr_reply: false,
-          is_system_reply: true,
-          created_at: new Date().toISOString()
-        });
+    if (!questionError) {
+      const { data: questionData } = await supabase
+        .from('candidate_questions')
+        .select('id')
+        .eq('candidate_id', id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (questionData) {
+        await supabase
+          .from('question_replies')
+          .insert({
+            question_id: questionData.id,
+            reply: probationMessage,
+            replied_by: 'Jarurat Care Foundation',
+            is_hr_reply: false,
+            is_system_reply: true,
+            created_at: new Date().toISOString()
+          });
+      }
     }
+
+    // ===== LOG ACTIVITY - PROBATION MEETING SCHEDULED =====
+    await logTeamActivity(
+      'probation_meeting_scheduled',
+      'onboarding',
+      id,
+      {
+        candidate_id: id,
+        candidate_name: candidate.name || candidate.full_name,
+        date: dateStr,
+        startTime: startTimeStr,
+        endTime: endTimeStr
+      }
+    );
+    // ===== END LOG ACTIVITY =====
+
+    alert(`✅ Probation meeting scheduled successfully for ${timeSlotDisplay} on ${formatDateDisplay(dateStr)}!`);
+    setProbationInput({ date: '', startTime: '', endTime: '', link: '' });
+    fetchCompleteProfile();
   }
-
-  // ===== LOG ACTIVITY - PROBATION MEETING SCHEDULED =====
-  await logTeamActivity(
-    'probation_meeting_scheduled',
-    'onboarding',
-    id,
-    {
-      candidate_id: id,
-      candidate_name: candidate.name || candidate.full_name,
-      date: dateStr,
-      startTime: startTimeStr,
-      endTime: endTimeStr
-    }
-  );
-  // ===== END LOG ACTIVITY =====
-
-  alert(`✅ Probation meeting scheduled successfully for ${timeSlotDisplay} on ${formatDateDisplay(dateStr)}!`);
-  setProbationInput({ date: '', startTime: '', endTime: '', link: '' });
-  fetchCompleteProfile();
-}
 
   function formatDateDisplay(dateStr) {
     if (!dateStr) return '';
@@ -1597,7 +1654,7 @@ Jarurat Care Foundation`;
           <div>
             <span style={{ fontWeight: '700', color: '#6d28d9', fontSize: '14px' }}>⏳ CANDIDATE ON WAITLIST</span>
             <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#5b21b6' }}>
-              {candidate.waitlisted_at && `Waitlisted: ${new Date(candidate.waitlisted_at).toLocaleDateString()}`}
+              {candidate.waitlisted_at && `Waitlisted: ${formatIST(candidate.waitlisted_at)}`}
             </p>
             {candidate.waitlist_notes && (
               <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#7c3aed', fontStyle: 'italic' }}>
@@ -1822,7 +1879,7 @@ Jarurat Care Foundation`;
 
             {isOnWaitlist && candidate.waitlisted_at && (
               <p style={{ margin: '8px 0', fontSize: '13px', color: '#7c3aed' }}>
-                <strong>Waitlisted:</strong> {new Date(candidate.waitlisted_at).toLocaleString()}
+                <strong>Waitlisted:</strong> {formatIST(candidate.waitlisted_at)}
               </p>
             )}
           </div>
@@ -2046,7 +2103,7 @@ Jarurat Care Foundation`;
           </div>
         </div>
 
-        {/* RIGHT COLUMN - Workflow Workspace (unchanged) */}
+        {/* RIGHT COLUMN - Workflow Workspace */}
         <div style={{ background: '#fff', padding: '24px', borderRadius: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0' }}>
           <h2 style={{ margin: '0 0 20px 0', color: '#0f172a', borderBottom: '2px solid #f1f5f9', paddingBottom: '10px', fontSize: '22px' }}>Workflow Workspace</h2>
           
@@ -2346,7 +2403,7 @@ Jarurat Care Foundation`;
             </div>
           )}
 
-          {/* Interview Section - unchanged */}
+          {/* Interview Section */}
           {candidate.current_stage === 'Interview' && (
             <div style={{ marginTop: '20px', borderTop: '2px solid #f1f5f9', paddingTop: '20px' }}>
               
@@ -2869,7 +2926,7 @@ Jarurat Care Foundation`;
               </p>
               {candidate.waitlisted_at && (
                 <p style={{ fontSize: '12px', margin: '4px 0 0 0', color: '#8b5cf6' }}>
-                  Waitlisted: {new Date(candidate.waitlisted_at).toLocaleString()}
+                  Waitlisted: {formatIST(candidate.waitlisted_at)}
                 </p>
               )}
               <button
@@ -3281,9 +3338,7 @@ Jarurat Care Foundation`;
           }}>
             <h3 style={{ margin: '0 0 15px 0', color: '#8b5cf6' }}>⏳ Add Candidate to Waitlist</h3>
             <p style={{ color: '#173c6f', fontSize: '14px', marginBottom: '16px' }}>
-              
-                <strong>Current stage being paused:</strong> {candidate.current_stage}
-      
+              <strong>Current stage being paused:</strong> {candidate.current_stage}
             </p>
             
             <div style={{ marginBottom: '16px' }}>

@@ -2,6 +2,27 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../services/supabase';
 
+// ===== HELPER: Format IST Date =====
+function formatIST(dateString) {
+  if (!dateString) return '';
+  try {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return '';
+    return date.toLocaleString('en-IN', { 
+      timeZone: 'Asia/Kolkata',
+      year: 'numeric',
+      month: 'numeric',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true
+    });
+  } catch (e) {
+    return dateString;
+  }
+}
+
 export default function CandidatePortalPage() {
   const navigate = useNavigate();
 
@@ -1519,7 +1540,7 @@ export default function CandidatePortalPage() {
             </p>
             {candidate.waitlisted_at && (
               <p style={{ fontSize: '12px', color: '#a78bfa', marginTop: '8px' }}>
-                Waitlisted on: {new Date(candidate.waitlisted_at).toLocaleString()}
+                Waitlisted on: {formatIST(candidate.waitlisted_at)}
               </p>
             )}
           </div>
@@ -2293,7 +2314,7 @@ export default function CandidatePortalPage() {
                 </p>
                 {candidate.waitlisted_at && (
                   <p style={{ margin: '8px 0 0 0', fontSize: '12px', color: '#a78bfa' }}>
-                    Waitlisted on: {new Date(candidate.waitlisted_at).toLocaleString()}
+                    Waitlisted on: {formatIST(candidate.waitlisted_at)}
                   </p>
                 )}
               </div>
