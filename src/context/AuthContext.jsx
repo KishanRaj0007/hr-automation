@@ -20,7 +20,7 @@ export function AuthProvider({ children }) {
     checkSession();
   }, []);
 
-  // Auto-extend session on user activity (optional - keeps session alive)
+  // Auto-extend session on user activity
   useEffect(() => {
     if (!hrUser) return;
 
@@ -28,10 +28,8 @@ export function AuthProvider({ children }) {
       const now = Date.now();
       localStorage.setItem('lastActivity', now.toString());
       
-      // If session is about to expire, auto-extend it
       if (sessionExpiry) {
         const timeRemaining = sessionExpiry - now;
-        // If less than 30 minutes remaining, auto-extend
         if (timeRemaining < 30 * 60 * 1000 && timeRemaining > 0) {
           const newExpiry = now + (8 * 60 * 60 * 1000);
           localStorage.setItem('sessionExpiry', newExpiry.toString());
@@ -57,7 +55,6 @@ export function AuthProvider({ children }) {
   // Function to check if user is already logged in
   async function checkSession() {
     try {
-      // Check if we have stored user data
       const storedEmail = localStorage.getItem('hrEmail');
       const storedRole = localStorage.getItem('userRole');
       const storedName = localStorage.getItem('userName');
@@ -67,13 +64,11 @@ export function AuthProvider({ children }) {
       console.log('🔍 Session check:', { storedEmail, storedRole, storedName });
 
       if (storedEmail && storedRole) {
-        // Check session expiry - but DON'T auto-logout
         if (storedExpiry) {
           const expiryTime = parseInt(storedExpiry);
           const now = Date.now();
           
           if (now > expiryTime) {
-            // Session expired - show warning but KEEP the user logged in
             console.log('⚠️ Session expired, but keeping user logged in');
             setSessionWarning(true);
             setSessionExpiry(expiryTime);
@@ -83,7 +78,6 @@ export function AuthProvider({ children }) {
           }
         }
 
-        // Try to verify user in database
         const { data: user, error } = await supabase
           .from('hr_users')
           .select('*')
@@ -94,18 +88,15 @@ export function AuthProvider({ children }) {
         if (!error && user) {
           setHrUser(user);
           setUserRole(user.role);
-          // Use stored name if available, fallback to user.name
           const name = storedName || user.name || user.email?.split('@')[0] || 'HR User';
           setUserName(name);
           setUserTeam(user.team || 'leadership');
           
-          // Ensure localStorage has the name
           if (!storedName) {
             localStorage.setItem('userName', name);
           }
           console.log('✅ Session restored for:', name);
         } else {
-          // User not found in DB, but keep the session data anyway
           console.log('⚠️ User not found in DB, but keeping local session');
           setUserRole(storedRole);
           setUserName(storedName || storedEmail.split('@')[0]);
@@ -122,13 +113,12 @@ export function AuthProvider({ children }) {
       }
     } catch (error) {
       console.error('Session check error:', error);
-      // Don't clear session on error - keep user logged in
     } finally {
       setLoading(false);
     }
   }
 
-  // Clear all session data (only called on explicit logout)
+  // Clear all session data
   function clearSession() {
     console.log('🗑️ Clearing session...');
     localStorage.removeItem('hrEmail');
@@ -146,12 +136,73 @@ export function AuthProvider({ children }) {
     setSessionWarning(false);
   }
 
-  // Login function
-  async function login(email) {
+  // Login function - FIXED: Removed supabase.sql
+  async function login(email, password) {
     try {
       setLoading(true);
       console.log('🔑 Logging in:', email);
       
+      // First, authenticate with Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      if (authError) {
+        // Check if user exists in hr_users but not in auth
+        const { data: hrUserCheck, error: hrCheckError } = await supabase
+          .from('hr_users')
+          .select('*')
+          .eq('email', email)
+          .eq('is_active', true)
+          .maybeSingle();
+
+        if (hrUserCheck && !hrCheckError) {
+          // User exists in hr_users but not in auth - create auth user
+          console.log('🔄 User exists in hr_users but not in auth. Creating auth user...');
+          
+          const { data: newAuthUser, error: createError } = await supabase.auth.signUp({
+            email,
+            password,
+            options: {
+              data: {
+                name: hrUserCheck.name,
+                role: hrUserCheck.role
+              }
+            }
+          });
+
+          if (!createError && newAuthUser.user) {
+            console.log('✅ Auth user created successfully');
+            // Try login again
+            const { data: retryData, error: retryError } = await supabase.auth.signInWithPassword({
+              email,
+              password
+            });
+            
+            if (!retryError) {
+              // Continue with successful login
+              return await completeLogin(retryData.user, email);
+            }
+          }
+        }
+        
+        throw new Error('Invalid credentials: ' + authError.message);
+      }
+
+      return await completeLogin(authData.user, email);
+
+    } catch (error) {
+      console.error('Login error:', error);
+      return { success: false, error: error.message };
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // Helper function to complete login after authentication
+  async function completeLogin(authUser, email) {
+    try {
       // Check if user exists in hr_users table
       const { data: user, error } = await supabase
         .from('hr_users')
@@ -168,7 +219,35 @@ export function AuthProvider({ children }) {
         throw new Error('User not found or inactive. Please contact admin.');
       }
 
-      // Determine role and team based on email if not set in DB
+      // FIXED: Get current login_count and increment it
+      const currentCount = user.login_count || 0;
+      
+      // Update last_login and login_count
+      await supabase
+        .from('hr_users')
+        .update({
+          last_login: new Date().toISOString(),
+          login_count: currentCount + 1
+        })
+        .eq('id', user.id);
+
+      // Log to audit_logs
+      await supabase
+        .from('audit_logs')
+        .insert({
+          table_name: 'hr_users',
+          record_id: user.id,
+          action: 'login',
+          new_data: { 
+            login_time: new Date().toISOString(),
+            user_name: user.name,
+            user_email: user.email,
+            user_role: user.role
+          },
+          performed_by: user.email
+        });
+
+      // Determine role and team
       let role = user.role;
       let team = user.team || 'leadership';
       let name = user.name || user.email?.split('@')[0] || 'HR User';
@@ -176,7 +255,7 @@ export function AuthProvider({ children }) {
       // Set session expiry - 8 hours from now
       const expiry = Date.now() + (8 * 60 * 60 * 1000);
 
-      // ===== Store in localStorage =====
+      // Store in localStorage
       localStorage.setItem('hrEmail', user.email);
       localStorage.setItem('userRole', role);
       localStorage.setItem('userName', name);
@@ -195,13 +274,11 @@ export function AuthProvider({ children }) {
       setSessionExpiry(expiry);
       setSessionWarning(false);
 
-      return user;
+      return { success: true, user };
 
     } catch (error) {
-      console.error('Login error:', error);
-      throw error;
-    } finally {
-      setLoading(false);
+      console.error('Complete login error:', error);
+      return { success: false, error: error.message };
     }
   }
 
@@ -209,7 +286,6 @@ export function AuthProvider({ children }) {
   function quickLogin(email, name, role, team) {
     console.log('⚡ Quick login:', { email, name, role, team });
     
-    // Set session expiry - 8 hours from now
     const expiry = Date.now() + (8 * 60 * 60 * 1000);
     
     localStorage.setItem('hrEmail', email);
@@ -238,15 +314,139 @@ export function AuthProvider({ children }) {
     console.log('🔄 Session extended for another 8 hours');
   }
 
-  // Logout function - ONLY called when user clicks logout
-  function logout() {
+  // Logout function
+  async function logout() {
+    if (hrUser) {
+      try {
+        await supabase
+          .from('audit_logs')
+          .insert({
+            table_name: 'hr_users',
+            record_id: hrUser.id,
+            action: 'logout',
+            new_data: { 
+              logout_time: new Date().toISOString(),
+              user_name: hrUser.name,
+              user_email: hrUser.email
+            },
+            performed_by: hrUser.email
+          });
+      } catch (error) {
+        console.error('Error logging logout:', error);
+      }
+    }
+    
+    await supabase.auth.signOut();
     clearSession();
   }
 
-  // Check if session is expired (just for display purposes)
+  // Check if session is expired
   function isSessionExpired() {
     if (!sessionExpiry) return false;
     return Date.now() > sessionExpiry;
+  }
+
+  // Check if user can register other users
+  function canRegisterUsers() {
+    const allowedRoles = ['hr_lead', 'project_manager'];
+    return userRole && allowedRoles.includes(userRole);
+  }
+
+  // Register a new user
+  async function registerUser(userData) {
+    try {
+      if (!canRegisterUsers()) {
+        throw new Error('You do not have permission to register users. Only HR Lead and Project Manager can register.');
+      }
+
+      const { email, name, role, team } = userData;
+
+      const { data: existingUser, error: checkError } = await supabase
+        .from('hr_users')
+        .select('email')
+        .eq('email', email)
+        .maybeSingle();
+
+      if (checkError) {
+        throw new Error('Error checking existing user: ' + checkError.message);
+      }
+
+      if (existingUser) {
+        throw new Error('User with this email already exists');
+      }
+
+      const tempPassword = Math.random().toString(36).slice(-8) + 'A1!';
+
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email,
+        password: tempPassword,
+        options: {
+          data: {
+            name: name,
+            role: role
+          }
+        }
+      });
+
+      if (authError) {
+        throw new Error('Auth error: ' + authError.message);
+      }
+
+      if (!authData.user) {
+        throw new Error('Failed to create auth user');
+      }
+
+      const { data: hrUser, error: hrError } = await supabase
+        .from('hr_users')
+        .insert({
+          id: authData.user.id,
+          email: email,
+          name: name,
+          role: role || 'panelist',
+          team: team || 'panel_r1',
+          is_active: true,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+
+      if (hrError) {
+        try {
+          await supabase.auth.admin.deleteUser(authData.user.id);
+        } catch (deleteError) {
+          console.error('Error rolling back auth user:', deleteError);
+        }
+        throw new Error('HR user creation error: ' + hrError.message);
+      }
+
+      await supabase
+        .from('audit_logs')
+        .insert({
+          table_name: 'hr_users',
+          record_id: hrUser.id,
+          action: 'create_user',
+          new_data: {
+            email,
+            name,
+            role,
+            team,
+            created_by: hrUser?.email || 'system'
+          },
+          performed_by: hrUser?.email || 'system'
+        });
+
+      return { 
+        success: true, 
+        user: hrUser,
+        tempPassword: tempPassword,
+        message: `User registered successfully! Temporary password: ${tempPassword}`
+      };
+
+    } catch (error) {
+      console.error('Registration error:', error);
+      return { success: false, error: error.message };
+    }
   }
 
   // Helper functions for role checks
@@ -265,15 +465,10 @@ export function AuthProvider({ children }) {
                      userRole === 'r2_panelist';
 
   const isSuperAdmin = userRole === 'super_admin';
-
   const isHRLead = userRole === 'hr_lead';
-
   const isProjectManager = userRole === 'project_manager';
-
   const isAssignmentTeam = userRole === 'assignment_team';
-
   const isSchedulingTeam = userRole === 'scheduling_team';
-
   const isR1Panelist = userRole === 'r1_panelist';
   const isR2Panelist = userRole === 'r2_panelist';
 
@@ -296,6 +491,10 @@ export function AuthProvider({ children }) {
     checkSession,
     extendSession,
     isSessionExpired,
+    
+    // Registration functions
+    canRegisterUsers,
+    registerUser,
     
     // Role checks
     isHR,

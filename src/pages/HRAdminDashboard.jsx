@@ -1,14 +1,21 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../services/supabase';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import RegisterUser from '../components/RegisterUser';
+import ChangePasswordModal from '../components/ChangePasswordModal';
 
 function HRAdminDashboard() {
   const navigate = useNavigate();
+  const { user, userName, userRole, canRegisterUsers, logout } = useAuth();
   const [loading, setLoading] = useState(true);
   const [candidates, setCandidates] = useState([]);
   const [search, setSearch] = useState('');
   const [domainFilter, setDomainFilter] = useState('');
   const [stageFilter, setStageFilter] = useState('');
+  const [showRegisterModal, setShowRegisterModal] = useState(false);
+  const [showChangePassword, setShowChangePassword] = useState(false);
+  const [registrationSuccess, setRegistrationSuccess] = useState(null);
   
   const [metrics, setMetrics] = useState({ 
     total: 0, 
@@ -59,29 +66,14 @@ function HRAdminDashboard() {
   };
 
   useEffect(() => {
-    fetchDashboardData();
-    
-    // ===== FIX: Auto-recover user name if missing =====
-    const storedName = localStorage.getItem('userName');
+    // Check if user is logged in
     const storedEmail = localStorage.getItem('hrEmail');
-    
-    console.log('🔄 Dashboard mounted, checking session:', { storedName, storedEmail });
-    
-    // If no name but email exists, recover from email
-    if ((!storedName || storedName === 'null' || storedName === 'undefined' || storedName === '') && storedEmail) {
-      const recoveredName = storedEmail.split('@')[0];
-      console.log('🔄 Auto-recovering name from email:', recoveredName);
-      localStorage.setItem('userName', recoveredName);
-      // Force re-render
-      setLoading(false);
-    }
-    
-    // If no session at all, redirect to login
-    if (!storedEmail) {
-      console.log('⚠️ No session found, redirecting to login');
+    if (!storedEmail && !user) {
       navigate('/hr-login');
+      return;
     }
-    // ===== END FIX =====
+    
+    fetchDashboardData();
   }, []);
 
   async function fetchDashboardData() {
@@ -136,6 +128,16 @@ function HRAdminDashboard() {
 
   const uniqueDomains = [...new Set(candidates.map(c => c.domain).filter(Boolean))].sort((a, b) => a.localeCompare(b));
 
+  const handleLogout = async () => {
+    await logout();
+    navigate('/hr-login');
+  };
+
+  const handleRegistrationSuccess = (newUser) => {
+    setRegistrationSuccess(`✅ ${newUser.name} registered successfully!`);
+    setTimeout(() => setRegistrationSuccess(null), 5000);
+  };
+
   if (loading) return <h3 style={{ padding: '30px', fontFamily: 'sans-serif', color: '#334155' }}>Loading Funnel Workspace...</h3>;
 
   // KPI Data - WITHOUT TOTAL
@@ -154,24 +156,9 @@ function HRAdminDashboard() {
     { label: 'REJECTED', count: metrics.rejected, color: '#ef4444', filterValue: 'Rejected' }
   ];
 
-  // Get user name with proper fallbacks - RECOVERY VERSION
-  const getUserName = () => {
-    let name = localStorage.getItem('userName');
-    const email = localStorage.getItem('hrEmail');
-    
-    // If name is null/undefined/empty, try to recover from email
-    if (!name || name === 'null' || name === 'undefined' || name === '') {
-      if (email) {
-        name = email.split('@')[0];
-        // Save it back for next time
-        localStorage.setItem('userName', name);
-        console.log('🔄 Recovered name from email:', name);
-      } else {
-        return 'HR User';
-      }
-    }
-    return name;
-  };
+  // Get user name from AuthContext
+  const displayName = userName || user?.name || localStorage.getItem('userName') || 'HR User';
+  const displayRole = userRole || localStorage.getItem('userRole') || 'team_member';
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#fcfcfd', padding: '40px 60px', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
@@ -244,18 +231,89 @@ function HRAdminDashboard() {
         </div>
         
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <span style={{ fontSize: '13px', color: '#64748b' }}>
-            👤 {getUserName()}
-          </span>
+          {/* User Info */}
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '8px',
+            padding: '4px 12px 4px 8px',
+            borderRadius: '8px',
+            background: '#f8fafc',
+            border: '1px solid #e2e8f0'
+          }}>
+            <div style={{
+              width: '32px',
+              height: '32px',
+              borderRadius: '50%',
+              background: '#3b82f6',
+              color: '#fff',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '14px',
+              fontWeight: '600'
+            }}>
+              {displayName.charAt(0).toUpperCase()}
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              <span style={{ fontSize: '13px', fontWeight: '600', color: '#1e293b' }}>
+                {displayName}
+              </span>
+              <span style={{ fontSize: '10px', color: '#94a3b8', textTransform: 'capitalize' }}>
+                {displayRole.replace('_', ' ')}
+              </span>
+            </div>
+          </div>
+
+          {/* Register Button - Only for HR Lead and Project Manager */}
+          {canRegisterUsers() && (
+            <button
+              onClick={() => setShowRegisterModal(true)}
+              style={{
+                padding: '8px 16px',
+                borderRadius: '8px',
+                border: 'none',
+                background: '#3b82f6',
+                color: '#fff',
+                fontWeight: '600',
+                cursor: 'pointer',
+                fontSize: '13px',
+                transition: 'all 0.2s ease',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}
+              onMouseEnter={(e) => { e.target.style.background = '#2563eb'; }}
+              onMouseLeave={(e) => { e.target.style.background = '#3b82f6'; }}
+            >
+              <span>➕</span> Register User
+            </button>
+          )}
+
+          {/* Change Password Button - Visible to ALL users */}
           <button
-            onClick={() => {
-              localStorage.removeItem('hrEmail');
-              localStorage.removeItem('userRole');
-              localStorage.removeItem('userName');
-              localStorage.removeItem('userTeam');
-              localStorage.removeItem('panelistName');
-              navigate('/hr-login');
+            onClick={() => setShowChangePassword(true)}
+            style={{
+              padding: '6px 16px',
+              borderRadius: '6px',
+              border: '1px solid #e2e8f0',
+              background: 'transparent',
+              cursor: 'pointer',
+              fontSize: '13px',
+              color: '#64748b',
+              transition: 'all 0.2s ease',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px'
             }}
+            onMouseEnter={(e) => { e.target.style.background = '#f1f5f9'; }}
+            onMouseLeave={(e) => { e.target.style.background = 'transparent'; }}
+          >
+            🔑 Change Password
+          </button>
+
+          <button
+            onClick={handleLogout}
             style={{
               padding: '6px 16px',
               borderRadius: '6px',
@@ -273,6 +331,24 @@ function HRAdminDashboard() {
           </button>
         </div>
       </div>
+
+      {/* Registration Success Message */}
+      {registrationSuccess && (
+        <div style={{
+          padding: '12px 20px',
+          borderRadius: '8px',
+          background: '#f0fdf4',
+          border: '1px solid #bbf7d0',
+          color: '#166534',
+          marginBottom: '16px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px'
+        }}>
+          <span style={{ fontSize: '18px' }}>✅</span>
+          {registrationSuccess}
+        </div>
+      )}
 
       <h1 style={{ color: '#0f1e36', marginBottom: '30px', fontWeight: '800', fontSize: '56px', textAlign: 'center', letterSpacing: '-1px', lineHeight: '1.2' }}>
         HR Funnel Dashboard
@@ -504,6 +580,18 @@ function HRAdminDashboard() {
         </table>
       </div>
 
+      {/* Register User Modal */}
+      {showRegisterModal && (
+        <RegisterUser 
+          onClose={() => setShowRegisterModal(false)}
+          onSuccess={handleRegistrationSuccess}
+        />
+      )}
+
+      {/* Change Password Modal */}
+      {showChangePassword && (
+        <ChangePasswordModal onClose={() => setShowChangePassword(false)} />
+      )}
     </div>
   );
 }

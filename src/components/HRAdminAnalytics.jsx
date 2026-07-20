@@ -4,13 +4,18 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import TeamPerformance from '../components/TeamPerformance';
 import TeamActivityTracker from '../components/TeamActivityTracker';
+import RegisterUser from '../components/RegisterUser';
+import ChangePasswordModal from '../components/ChangePasswordModal';
 
 function HRAdminAnalytics() {
   const navigate = useNavigate();
-  const { userRole, isAdmin } = useAuth();
+  const { user, userName, userRole, canRegisterUsers, logout } = useAuth();
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
   const [timeframe, setTimeframe] = useState('week');
+  const [showRegisterModal, setShowRegisterModal] = useState(false);
+  const [showChangePassword, setShowChangePassword] = useState(false);
+  const [registrationSuccess, setRegistrationSuccess] = useState(null);
   
   // All data states
   const [candidates, setCandidates] = useState([]);
@@ -73,6 +78,15 @@ function HRAdminAnalytics() {
     reviewerStats: {}
   });
   const [exportLoading, setExportLoading] = useState(false);
+
+  // Check session on mount
+  useEffect(() => {
+    const storedEmail = localStorage.getItem('hrEmail');
+    if (!storedEmail && !user) {
+      navigate('/hr-login');
+      return;
+    }
+  }, []);
 
   useEffect(() => {
     if (activeTab === 'overview' || activeTab === 'performance') {
@@ -426,6 +440,20 @@ function HRAdminAnalytics() {
     }
   };
 
+  const handleLogout = async () => {
+    await logout();
+    navigate('/hr-login');
+  };
+
+  const handleRegistrationSuccess = (newUser) => {
+    setRegistrationSuccess(`✅ ${newUser.name} registered successfully!`);
+    setTimeout(() => setRegistrationSuccess(null), 5000);
+  };
+
+  // Get user name from AuthContext
+  const displayName = userName || user?.name || localStorage.getItem('userName') || 'HR User';
+  const displayRole = userRole || localStorage.getItem('userRole') || 'team_member';
+
   if (loading && activeTab === 'overview') {
     return (
       <div style={{ 
@@ -473,26 +501,110 @@ function HRAdminAnalytics() {
         flexWrap: 'wrap',
         gap: '12px'
       }}>
-        <button 
-          onClick={() => navigate('/')}
-          style={{
-            background: 'none',
-            border: 'none',
-            color: '#2563eb',
-            cursor: 'pointer',
-            fontWeight: '600',
-            fontSize: '14px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px'
-          }}
-        >
-          ← Back to Dashboard
-        </button>
-        <h1 style={{ margin: 0, color: '#0f172a', fontSize: '28px', fontWeight: '700' }}>
-          📊 Analytics
-        </h1>
-        <div style={{ display: 'flex', gap: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <button 
+            onClick={() => navigate('/')}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#2563eb',
+              cursor: 'pointer',
+              fontWeight: '600',
+              fontSize: '14px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+          >
+            ← Back to Dashboard
+          </button>
+          <h1 style={{ margin: 0, color: '#0f172a', fontSize: '28px', fontWeight: '700' }}>
+            📊 Analytics
+          </h1>
+        </div>
+        
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+          {/* User Info */}
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '8px',
+            padding: '4px 12px 4px 8px',
+            borderRadius: '8px',
+            background: '#fff',
+            border: '1px solid #e2e8f0'
+          }}>
+            <div style={{
+              width: '32px',
+              height: '32px',
+              borderRadius: '50%',
+              background: '#3b82f6',
+              color: '#fff',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '14px',
+              fontWeight: '600'
+            }}>
+              {displayName.charAt(0).toUpperCase()}
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              <span style={{ fontSize: '13px', fontWeight: '600', color: '#1e293b' }}>
+                {displayName}
+              </span>
+              <span style={{ fontSize: '10px', color: '#94a3b8', textTransform: 'capitalize' }}>
+                {displayRole.replace('_', ' ')}
+              </span>
+            </div>
+          </div>
+
+          {/* Register Button - Only for HR Lead and Project Manager */}
+          {canRegisterUsers() && (
+            <button
+              onClick={() => setShowRegisterModal(true)}
+              style={{
+                padding: '8px 16px',
+                borderRadius: '8px',
+                border: 'none',
+                background: '#3b82f6',
+                color: '#fff',
+                fontWeight: '600',
+                cursor: 'pointer',
+                fontSize: '13px',
+                transition: 'all 0.2s ease',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}
+              onMouseEnter={(e) => { e.target.style.background = '#2563eb'; }}
+              onMouseLeave={(e) => { e.target.style.background = '#3b82f6'; }}
+            >
+              <span>➕</span> Register User
+            </button>
+          )}
+
+          {/* Change Password Button - Visible to ALL users */}
+          <button
+            onClick={() => setShowChangePassword(true)}
+            style={{
+              padding: '6px 16px',
+              borderRadius: '6px',
+              border: '1px solid #e2e8f0',
+              background: 'transparent',
+              cursor: 'pointer',
+              fontSize: '13px',
+              color: '#64748b',
+              transition: 'all 0.2s ease',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px'
+            }}
+            onMouseEnter={(e) => { e.target.style.background = '#f1f5f9'; }}
+            onMouseLeave={(e) => { e.target.style.background = 'transparent'; }}
+          >
+            🔑 Change Password
+          </button>
+
           <button
             onClick={fetchAllData}
             style={{
@@ -511,8 +623,44 @@ function HRAdminAnalytics() {
           >
             🔄 Refresh
           </button>
+
+          <button
+            onClick={handleLogout}
+            style={{
+              padding: '6px 16px',
+              borderRadius: '6px',
+              border: '1px solid #e2e8f0',
+              background: 'transparent',
+              cursor: 'pointer',
+              fontSize: '13px',
+              color: '#64748b',
+              transition: 'all 0.2s ease'
+            }}
+            onMouseEnter={(e) => { e.target.style.background = '#f1f5f9'; }}
+            onMouseLeave={(e) => { e.target.style.background = 'transparent'; }}
+          >
+            Logout
+          </button>
         </div>
       </div>
+
+      {/* Registration Success Message */}
+      {registrationSuccess && (
+        <div style={{
+          padding: '12px 20px',
+          borderRadius: '8px',
+          background: '#f0fdf4',
+          border: '1px solid #bbf7d0',
+          color: '#166534',
+          marginBottom: '16px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px'
+        }}>
+          <span style={{ fontSize: '18px' }}>✅</span>
+          {registrationSuccess}
+        </div>
+      )}
 
       {/* Main Tabs */}
       <div style={{ 
@@ -1256,6 +1404,19 @@ function HRAdminAnalytics() {
             </div>
           )}
         </div>
+      )}
+
+      {/* Register User Modal */}
+      {showRegisterModal && (
+        <RegisterUser 
+          onClose={() => setShowRegisterModal(false)}
+          onSuccess={handleRegistrationSuccess}
+        />
+      )}
+
+      {/* Change Password Modal */}
+      {showChangePassword && (
+        <ChangePasswordModal onClose={() => setShowChangePassword(false)} />
       )}
     </div>
   );
