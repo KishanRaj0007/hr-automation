@@ -1,4 +1,4 @@
-// components/StageAnalytics.jsx
+// components/StageAnalytics.jsx - WITH CALENDAR-BASED TIMEFRAMES
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../services/supabase';
 import { calculateStageAnalytics } from '../utils/analyticsHelpers';
@@ -6,18 +6,178 @@ import { calculateStageAnalytics } from '../utils/analyticsHelpers';
 const StageAnalytics = () => {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState(null);
+  const [timeframe, setTimeframe] = useState('all');
+  const [selectedMonth, setSelectedMonth] = useState(null);
+  const [selectedQuarter, setSelectedQuarter] = useState(null);
+  const [selectedWeek, setSelectedWeek] = useState(null);
 
+  // Get current month and week
   useEffect(() => {
-    fetchAllData();
+    const now = new Date();
+    setSelectedMonth(now.getMonth());
+    setSelectedQuarter(getCurrentQuarter(now));
+    setSelectedWeek(getCurrentWeekNumber(now));
   }, []);
+
+  function getCurrentQuarter(date) {
+    const month = date.getMonth();
+    return Math.floor(month / 3);
+  }
+
+  function getCurrentWeekNumber(date) {
+    const firstDayOfYear = new Date(date.getFullYear(), 0, 1);
+    const pastDaysOfYear = (date - firstDayOfYear) / 86400000;
+    return Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1) / 7);
+  }
+
+  function getWeekRange(weekNumber, year) {
+    const firstDayOfYear = new Date(year, 0, 1);
+    const daysOffset = (weekNumber - 1) * 7 - firstDayOfYear.getDay();
+    const start = new Date(year, 0, 1 + daysOffset);
+    const end = new Date(start);
+    end.setDate(start.getDate() + 6);
+    return { start, end };
+  }
+
+  function getDateRange(timeframe, month, quarter, week) {
+    const now = new Date();
+    const year = now.getFullYear();
+    let start = new Date();
+    let end = new Date();
+
+    switch(timeframe) {
+      case 'today': {
+        start.setHours(0, 0, 0, 0);
+        end.setHours(23, 59, 59, 999);
+        break;
+      }
+      case 'week': {
+        // Get current week (Sunday to Saturday)
+        const currentDay = now.getDay();
+        const diffToSunday = currentDay; // Sunday is 0
+        start = new Date(now);
+        start.setDate(now.getDate() - diffToSunday);
+        start.setHours(0, 0, 0, 0);
+        end = new Date(start);
+        end.setDate(start.getDate() + 6);
+        end.setHours(23, 59, 59, 999);
+        break;
+      }
+      case 'month': {
+        // Get current month (1st to last day)
+        const selectedMonthNum = month !== null ? month : now.getMonth();
+        start = new Date(year, selectedMonthNum, 1);
+        end = new Date(year, selectedMonthNum + 1, 0);
+        end.setHours(23, 59, 59, 999);
+        break;
+      }
+      case 'quarter': {
+        // Get current quarter
+        const selectedQuarterNum = quarter !== null ? quarter : getCurrentQuarter(now);
+        const quarterStartMonth = selectedQuarterNum * 3;
+        start = new Date(year, quarterStartMonth, 1);
+        end = new Date(year, quarterStartMonth + 3, 0);
+        end.setHours(23, 59, 59, 999);
+        break;
+      }
+      case 'all':
+      default: {
+        return { start: null, end: null };
+      }
+    }
+
+    return {
+      start: start.toISOString(),
+      end: end.toISOString()
+    };
+  }
+
+  function getTimeframeLabel(timeframe, month, quarter, week) {
+    const now = new Date();
+    const year = now.getFullYear();
+    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    const quarterNames = ['Q1 (Jan-Mar)', 'Q2 (Apr-Jun)', 'Q3 (Jul-Sep)', 'Q4 (Oct-Dec)'];
+    
+    switch(timeframe) {
+      case 'today': return 'Today';
+      case 'week': {
+        const selectedWeek = week !== null ? week : getCurrentWeekNumber(now);
+        const range = getWeekRange(selectedWeek, year);
+        const startStr = range.start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        const endStr = range.end.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        return `Week ${selectedWeek} (${startStr} - ${endStr})`;
+      }
+      case 'month': {
+        const selectedMonthNum = month !== null ? month : now.getMonth();
+        return `${monthNames[selectedMonthNum]} ${year}`;
+      }
+      case 'quarter': {
+        const selectedQuarterNum = quarter !== null ? quarter : getCurrentQuarter(now);
+        return `${quarterNames[selectedQuarterNum]} ${year}`;
+      }
+      case 'all':
+      default: return 'All Time';
+    }
+  }
+
+  // Navigation functions
+  function navigateWeek(direction) {
+    const newWeek = (selectedWeek || getCurrentWeekNumber(new Date())) + direction;
+    setSelectedWeek(newWeek);
+    fetchAllData();
+  }
+
+  function navigateMonth(direction) {
+    const newMonth = (selectedMonth !== null ? selectedMonth : new Date().getMonth()) + direction;
+    if (newMonth < 0) {
+      setSelectedMonth(11);
+    } else if (newMonth > 11) {
+      setSelectedMonth(0);
+    } else {
+      setSelectedMonth(newMonth);
+    }
+    fetchAllData();
+  }
+
+  function navigateQuarter(direction) {
+    const newQuarter = (selectedQuarter !== null ? selectedQuarter : getCurrentQuarter(new Date())) + direction;
+    if (newQuarter < 0) {
+      setSelectedQuarter(3);
+    } else if (newQuarter > 3) {
+      setSelectedQuarter(0);
+    } else {
+      setSelectedQuarter(newQuarter);
+    }
+    fetchAllData();
+  }
 
   async function fetchAllData() {
     setLoading(true);
     try {
+      const range = getDateRange(timeframe, selectedMonth, selectedQuarter, selectedWeek);
+
+      let candidatesQuery = supabase.from('candidates').select('*');
+      let assignmentsQuery = supabase.from('assignments').select('*');
+      let interviewsQuery = supabase.from('interviews').select('*');
+
+      if (range.start && range.end) {
+        candidatesQuery = candidatesQuery
+          .gte('created_at', range.start)
+          .lte('created_at', range.end);
+        
+        assignmentsQuery = assignmentsQuery
+          .gte('created_at', range.start)
+          .lte('created_at', range.end);
+        
+        interviewsQuery = interviewsQuery
+          .gte('created_at', range.start)
+          .lte('created_at', range.end);
+      }
+
       const [candidatesRes, assignmentsRes, interviewsRes] = await Promise.all([
-        supabase.from('candidates').select('*'),
-        supabase.from('assignments').select('*'),
-        supabase.from('interviews').select('*')
+        candidatesQuery,
+        assignmentsQuery,
+        interviewsQuery
       ]);
 
       const candidates = candidatesRes.data || [];
@@ -25,6 +185,12 @@ const StageAnalytics = () => {
       const interviews = interviewsRes.data || [];
 
       const analytics = calculateStageAnalytics(candidates, assignments, interviews);
+      
+      analytics.timeframe = {
+        label: getTimeframeLabel(timeframe, selectedMonth, selectedQuarter, selectedWeek),
+        range: range
+      };
+      
       setData(analytics);
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -32,6 +198,10 @@ const StageAnalytics = () => {
       setLoading(false);
     }
   }
+
+  useEffect(() => {
+    fetchAllData();
+  }, [timeframe, selectedMonth, selectedQuarter, selectedWeek]);
 
   if (loading) {
     return (
@@ -60,11 +230,177 @@ const StageAnalytics = () => {
     return <div style={{ padding: '40px', textAlign: 'center', color: '#94a3b8' }}>No data available</div>;
   }
 
+  // Get current date info for navigation display
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  const quarterNames = ['Q1 (Jan-Mar)', 'Q2 (Apr-Jun)', 'Q3 (Jul-Sep)', 'Q4 (Oct-Dec)'];
+
   return (
     <div style={{ padding: '20px 0' }}>
-      <h2 style={{ margin: '0 0 24px 0', color: '#0f172a', fontSize: '24px', fontWeight: '700' }}>
-        📊 Stage Analytics Dashboard
-      </h2>
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
+        marginBottom: '24px',
+        flexWrap: 'wrap',
+        gap: '12px'
+      }}>
+        <h2 style={{ margin: 0, color: '#0f172a', fontSize: '24px', fontWeight: '700' }}>
+          📊 Stage Analytics Dashboard
+          <span style={{ 
+            fontSize: '14px', 
+            fontWeight: '400', 
+            color: '#64748b',
+            marginLeft: '12px'
+          }}>
+            ({data.timeframe?.label || 'All Time'})
+          </span>
+        </h2>
+        
+        {/* Timeframe Filter Buttons */}
+        <div style={{ 
+          display: 'flex', 
+          gap: '6px',
+          flexWrap: 'wrap',
+          alignItems: 'center'
+        }}>
+          {/* Navigation Arrows (for week/month/quarter) */}
+          {(timeframe === 'week' || timeframe === 'month' || timeframe === 'quarter') && (
+            <button
+              onClick={() => {
+                if (timeframe === 'week') navigateWeek(-1);
+                else if (timeframe === 'month') navigateMonth(-1);
+                else if (timeframe === 'quarter') navigateQuarter(-1);
+              }}
+              style={{
+                padding: '6px 10px',
+                borderRadius: '6px',
+                border: '1px solid #e2e8f0',
+                background: '#fff',
+                color: '#4b5563',
+                cursor: 'pointer',
+                fontSize: '14px',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseEnter={(e) => e.target.style.background = '#f1f5f9'}
+              onMouseLeave={(e) => e.target.style.background = '#fff'}
+            >
+              ◀
+            </button>
+          )}
+          
+          <button
+            onClick={() => setTimeframe('today')}
+            style={{
+              padding: '6px 16px',
+              borderRadius: '6px',
+              border: timeframe === 'today' ? '2px solid #2563eb' : '1px solid #e2e8f0',
+              background: timeframe === 'today' ? '#eff6ff' : '#fff',
+              color: timeframe === 'today' ? '#1d4ed8' : '#4b5563',
+              fontSize: '12px',
+              fontWeight: timeframe === 'today' ? '600' : '500',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            Today
+          </button>
+          
+          <button
+            onClick={() => setTimeframe('week')}
+            style={{
+              padding: '6px 16px',
+              borderRadius: '6px',
+              border: timeframe === 'week' ? '2px solid #2563eb' : '1px solid #e2e8f0',
+              background: timeframe === 'week' ? '#eff6ff' : '#fff',
+              color: timeframe === 'week' ? '#1d4ed8' : '#4b5563',
+              fontSize: '12px',
+              fontWeight: timeframe === 'week' ? '600' : '500',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            Week
+          </button>
+          
+          <button
+            onClick={() => setTimeframe('month')}
+            style={{
+              padding: '6px 16px',
+              borderRadius: '6px',
+              border: timeframe === 'month' ? '2px solid #2563eb' : '1px solid #e2e8f0',
+              background: timeframe === 'month' ? '#eff6ff' : '#fff',
+              color: timeframe === 'month' ? '#1d4ed8' : '#4b5563',
+              fontSize: '12px',
+              fontWeight: timeframe === 'month' ? '600' : '500',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            Month
+          </button>
+          
+          <button
+            onClick={() => setTimeframe('quarter')}
+            style={{
+              padding: '6px 16px',
+              borderRadius: '6px',
+              border: timeframe === 'quarter' ? '2px solid #2563eb' : '1px solid #e2e8f0',
+              background: timeframe === 'quarter' ? '#eff6ff' : '#fff',
+              color: timeframe === 'quarter' ? '#1d4ed8' : '#4b5563',
+              fontSize: '12px',
+              fontWeight: timeframe === 'quarter' ? '600' : '500',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            Quarter
+          </button>
+          
+          <button
+            onClick={() => setTimeframe('all')}
+            style={{
+              padding: '6px 16px',
+              borderRadius: '6px',
+              border: timeframe === 'all' ? '2px solid #2563eb' : '1px solid #e2e8f0',
+              background: timeframe === 'all' ? '#eff6ff' : '#fff',
+              color: timeframe === 'all' ? '#1d4ed8' : '#4b5563',
+              fontSize: '12px',
+              fontWeight: timeframe === 'all' ? '600' : '500',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            All Time
+          </button>
+
+          {/* Navigation Arrows (right) */}
+          {(timeframe === 'week' || timeframe === 'month' || timeframe === 'quarter') && (
+            <button
+              onClick={() => {
+                if (timeframe === 'week') navigateWeek(1);
+                else if (timeframe === 'month') navigateMonth(1);
+                else if (timeframe === 'quarter') navigateQuarter(1);
+              }}
+              style={{
+                padding: '6px 10px',
+                borderRadius: '6px',
+                border: '1px solid #e2e8f0',
+                background: '#fff',
+                color: '#4b5563',
+                cursor: 'pointer',
+                fontSize: '14px',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseEnter={(e) => e.target.style.background = '#f1f5f9'}
+              onMouseLeave={(e) => e.target.style.background = '#fff'}
+            >
+              ▶
+            </button>
+          )}
+        </div>
+      </div>
 
       {/* Stage 1: Assignments */}
       <StageCard title="📝 STAGE 1: ASSIGNMENTS">
@@ -355,7 +691,6 @@ const MetricRow = ({ label, value, suffix, status, tooltip, thresholds, isLowerB
     }
   };
 
-  // Format value
   const displayValue = typeof value === 'number' && !isNaN(value) ? value.toFixed(1) : '0.0';
 
   return (

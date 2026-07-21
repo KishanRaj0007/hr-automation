@@ -1,18 +1,67 @@
-// utils/analyticsHelpers.js
+// utils/analyticsHelpers.js - COMPLETE FIXED VERSION
 
 export const calculateStageAnalytics = (candidates, assignments, interviews) => {
   // Helper function to calculate average
   const avg = (arr) => arr.length > 0 ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
-  
-  // Helper function to get count by status
-  const countByStatus = (items, statusField, statusValue) => {
-    return items.filter(item => item[statusField] === statusValue).length;
+
+  // Helper: Case-insensitive status check
+  const isStatus = (item, statusValue) => {
+    return item.status?.toLowerCase() === statusValue.toLowerCase();
+  };
+
+  // Helper: Case-insensitive result check
+  const isResult = (item, resultValue) => {
+    return item.result?.toLowerCase() === resultValue.toLowerCase();
+  };
+
+  // Helper: Case-insensitive round check
+  const isRound = (item, roundValue) => {
+    return item.round?.toString().toLowerCase() === roundValue.toString().toLowerCase();
+  };
+
+  // Helper: Check if interview is scheduled (any valid status)
+  const isScheduled = (item) => {
+    const status = item.status?.toLowerCase() || '';
+    return status === 'scheduled' || 
+           status === 'completed' || 
+           status === 'evaluated' || 
+           status === 'done' ||
+           status === 'finished' ||
+           status === 'confirmed' ||
+           // If it has a result, it was definitely scheduled
+           (item.result && item.result !== 'Pending' && item.result !== 'pending');
+  };
+
+  // Helper: Check if interview is conducted
+  const isConducted = (item) => {
+    const status = item.status?.toLowerCase() || '';
+    return status === 'completed' || 
+           status === 'evaluated' || 
+           status === 'done' ||
+           status === 'finished' ||
+           // If it has a pass/reject result, it was conducted
+           isResult(item, 'Passed') || 
+           isResult(item, 'Selected') || 
+           isResult(item, 'Rejected') || 
+           isResult(item, 'Accept');
   };
 
   // ============ STAGE 1: ASSIGNMENTS ============
-  const assignmentsSent = assignments.filter(a => a.assignment_status === 'Assigned' || a.assignment_status === 'Submitted' || a.assignment_status === 'Evaluated');
-  const assignmentsSubmitted = assignments.filter(a => a.assignment_status === 'Submitted' || a.assignment_status === 'Evaluated');
-  const assignmentsEvaluated = assignments.filter(a => a.assignment_status === 'Evaluated');
+  const assignmentsSent = assignments.filter(a => 
+    a.assignment_status === 'Assigned' || 
+    a.assignment_status === 'Submitted' || 
+    a.assignment_status === 'Evaluated'
+  );
+  
+  const assignmentsSubmitted = assignments.filter(a => 
+    a.assignment_status === 'Submitted' || 
+    a.assignment_status === 'Evaluated'
+  );
+  
+  const assignmentsEvaluated = assignments.filter(a => 
+    a.assignment_status === 'Evaluated'
+  );
+  
   const assignmentsPassed = assignments.filter(a => {
     const totalScore = (a.content_score || 0) + (a.formatting_score || 0) - (a.ai_score || 0);
     return totalScore >= 6 || a.hr_scorecard_approved === true;
@@ -38,32 +87,40 @@ export const calculateStageAnalytics = (candidates, assignments, interviews) => 
     ? (assignmentsPassed.length / assignmentsEvaluated.length) * 100 
     : 0;
 
-  // Late Submissions
   const lateSubmissions = assignments.filter(a => a.is_late_submission === true).length;
 
   // ============ STAGE 2: R1 SCHEDULING ============
-  const r1Interviews = interviews.filter(i => i.round === 'R1' || i.round === 1);
+  const r1Interviews = interviews.filter(i => isRound(i, 'R1') || isRound(i, '1'));
   
   // R1 TAT: R1 Scheduled Date - Assignment Pass Date (in days)
   const r1TATs = r1Interviews
-    .filter(i => i.scheduled_date && i.candidate_id)
+    .filter(i => (i.scheduled_date || i.scheduled_date_time) && i.candidate_id)
     .map(i => {
       const candidate = candidates.find(c => c.id === i.candidate_id);
       if (!candidate) return null;
-      // Find when assignment was passed - use candidate created_at or assignment data
       const assignmentDate = candidate.assignment_score ? new Date(candidate.updated_at) : new Date(candidate.created_at);
-      const scheduledDate = new Date(i.scheduled_date);
-      return Math.ceil((scheduledDate - assignmentDate) / (1000 * 60 * 60 * 24));
+      const scheduledDate = new Date(i.scheduled_date || i.scheduled_date_time);
+      const diffDays = Math.ceil((scheduledDate - assignmentDate) / (1000 * 60 * 60 * 24));
+      return diffDays > 0 ? diffDays : null;
     })
-    .filter(d => d !== null && d > 0);
+    .filter(d => d !== null);
   const r1TAT = r1TATs.length > 0 ? avg(r1TATs) : 0;
 
   // ============ STAGE 3: R1 INTERVIEWS ============
-  const r1Scheduled = r1Interviews.filter(i => i.status === 'Scheduled' || i.status === 'Completed');
-  const r1Conducted = r1Interviews.filter(i => i.status === 'Completed');
-  const r1Passed = r1Interviews.filter(i => i.result === 'Passed' || i.result === 'Selected' || i.result === 'Accept');
+  // Use the helper functions to determine scheduled/conducted
+  const r1Scheduled = r1Interviews.filter(i => isScheduled(i));
+  const r1Conducted = r1Interviews.filter(i => isConducted(i));
+  const r1Passed = r1Interviews.filter(i => 
+    isResult(i, 'Passed') || 
+    isResult(i, 'Selected') || 
+    isResult(i, 'Accept')
+  );
   const r1Rescheduled = r1Interviews.filter(i => (i.reschedule_count || 0) > 0);
-  const r1NonResponse = r1Interviews.filter(i => i.candidate_accepted === false || i.candidate_accepted === null);
+  const r1NonResponse = r1Interviews.filter(i => 
+    i.candidate_accepted === false || 
+    i.candidate_accepted === null || 
+    i.candidate_accepted === 'false'
+  );
 
   const r1ConductedRate = r1Scheduled.length > 0 ? (r1Conducted.length / r1Scheduled.length) * 100 : 0;
   const r1MovingForwardRate = r1Conducted.length > 0 ? (r1Passed.length / r1Conducted.length) * 100 : 0;
@@ -71,33 +128,42 @@ export const calculateStageAnalytics = (candidates, assignments, interviews) => 
   const r1NonResponseRate = r1Scheduled.length > 0 ? (r1NonResponse.length / r1Scheduled.length) * 100 : 0;
 
   // ============ STAGE 4: R2 SCHEDULING ============
-  const r2Interviews = interviews.filter(i => i.round === 'R2' || i.round === 2);
+  const r2Interviews = interviews.filter(i => isRound(i, 'R2') || isRound(i, '2'));
   
+  // R2 TAT: R2 Scheduled Date - R1 Pass Date (in days)
   const r2TATs = r2Interviews
-    .filter(i => i.scheduled_date && i.candidate_id)
+    .filter(i => (i.scheduled_date || i.scheduled_date_time) && i.candidate_id)
     .map(i => {
       const candidate = candidates.find(c => c.id === i.candidate_id);
       if (!candidate) return null;
-      // Find R1 pass date from interviews
       const r1Pass = interviews.find(interv => 
         interv.candidate_id === i.candidate_id && 
-        (interv.round === 'R1' || interv.round === 1) && 
-        (interv.result === 'Passed' || interv.result === 'Selected' || interv.result === 'Accept')
+        (isRound(interv, 'R1') || isRound(interv, '1')) && 
+        (isResult(interv, 'Passed') || isResult(interv, 'Selected') || isResult(interv, 'Accept'))
       );
       if (!r1Pass || !r1Pass.updated_at) return null;
       const passDate = new Date(r1Pass.updated_at);
-      const scheduledDate = new Date(i.scheduled_date);
-      return Math.ceil((scheduledDate - passDate) / (1000 * 60 * 60 * 24));
+      const scheduledDate = new Date(i.scheduled_date || i.scheduled_date_time);
+      const diffDays = Math.ceil((scheduledDate - passDate) / (1000 * 60 * 60 * 24));
+      return diffDays > 0 ? diffDays : null;
     })
-    .filter(d => d !== null && d > 0);
+    .filter(d => d !== null);
   const r2TAT = r2TATs.length > 0 ? avg(r2TATs) : 0;
 
   // ============ STAGE 5: R2 INTERVIEWS ============
-  const r2Scheduled = r2Interviews.filter(i => i.status === 'Scheduled' || i.status === 'Completed');
-  const r2Conducted = r2Interviews.filter(i => i.status === 'Completed');
-  const r2Passed = r2Interviews.filter(i => i.result === 'Passed' || i.result === 'Selected' || i.result === 'Accept');
+  const r2Scheduled = r2Interviews.filter(i => isScheduled(i));
+  const r2Conducted = r2Interviews.filter(i => isConducted(i));
+  const r2Passed = r2Interviews.filter(i => 
+    isResult(i, 'Passed') || 
+    isResult(i, 'Selected') || 
+    isResult(i, 'Accept')
+  );
   const r2Rescheduled = r2Interviews.filter(i => (i.reschedule_count || 0) > 0);
-  const r2NonResponse = r2Interviews.filter(i => i.candidate_accepted === false || i.candidate_accepted === null);
+  const r2NonResponse = r2Interviews.filter(i => 
+    i.candidate_accepted === false || 
+    i.candidate_accepted === null || 
+    i.candidate_accepted === 'false'
+  );
 
   const r2ConductedRate = r2Scheduled.length > 0 ? (r2Conducted.length / r2Scheduled.length) * 100 : 0;
   const r2MovingForwardRate = r2Conducted.length > 0 ? (r2Passed.length / r2Conducted.length) * 100 : 0;
@@ -138,7 +204,10 @@ export const calculateStageAnalytics = (candidates, assignments, interviews) => 
 
   // ============ HR WORKLOAD ============
   const pendingReviews = assignments.filter(a => a.assignment_status === 'Submitted').length;
-  const pendingInterviews = interviews.filter(i => i.status === 'Scheduled' && (!i.result || i.result === 'Pending')).length;
+  const pendingInterviews = interviews.filter(i => 
+    i.status === 'Scheduled' && 
+    (!i.result || i.result === 'Pending' || i.result === 'pending')
+  ).length;
   const pendingScheduling = candidates.filter(c => 
     c.current_stage === 'Assignment' || 
     c.current_stage === 'Interview' ||
@@ -228,13 +297,16 @@ export const calculateStageAnalytics = (candidates, assignments, interviews) => 
 
 // Helper function to determine status (Good, Watch, Flag/Investigate)
 const getStatus = (value, goodThreshold, investigateThreshold, isLowerBetter = false, upperGoodThreshold = null) => {
-  if (isNaN(value) || value === 0 || value === null) return 'good';
+  // Handle invalid values
+  if (isNaN(value) || value === 0 || value === null || value === undefined) return 'good';
   
   if (isLowerBetter) {
+    // For metrics where LOWER is better (TAT, Reschedule Rate, Non-Response Rate)
     if (value <= goodThreshold) return 'good';
     if (value <= investigateThreshold) return 'watch';
     return 'flag';
   } else {
+    // For metrics where HIGHER is better (Pass Rate, Conducted Rate)
     if (upperGoodThreshold && value >= upperGoodThreshold) return 'too_easy';
     if (value >= goodThreshold) return 'good';
     if (value >= investigateThreshold) return 'watch';
