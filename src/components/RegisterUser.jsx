@@ -8,8 +8,8 @@ const RegisterUser = ({ onClose, onSuccess }) => {
   const [formData, setFormData] = useState({
     email: '',
     name: '',
-    role: 'panelist',
-    team: 'panel_r1'
+    role: '',
+    team: ''
   });
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
@@ -20,6 +20,8 @@ const RegisterUser = ({ onClose, onSuccess }) => {
   const [selectedUser, setSelectedUser] = useState(null);
   const [showSuccess, setShowSuccess] = useState(false);
   const [registeredUser, setRegisteredUser] = useState(null);
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
 
   // Check for users without auth accounts
   useEffect(() => {
@@ -35,11 +37,8 @@ const RegisterUser = ({ onClose, onSuccess }) => {
 
       if (hrError) throw hrError;
 
-      // Get auth users using a different approach
-      // Since admin.listUsers might need service role, let's try a different method
       const authEmails = [];
       
-      // Try to get auth users via the users table
       try {
         const { data: authData, error: authError } = await supabase
           .from('users')
@@ -54,7 +53,6 @@ const RegisterUser = ({ onClose, onSuccess }) => {
         console.log('⚠️ Cannot fetch auth users directly.');
       }
 
-      // If we couldn't get auth users, just show the regular registration form
       if (authEmails.length === 0) {
         console.log('ℹ️ Cannot check auth users. Showing registration form.');
         return;
@@ -72,6 +70,16 @@ const RegisterUser = ({ onClose, onSuccess }) => {
     }
   }
 
+  // Auto-hide toast after 3 seconds
+  useEffect(() => {
+    if (showToast) {
+      const timer = setTimeout(() => {
+        setShowToast(false);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [showToast]);
+
   // Only show if user can register
   if (!canRegisterUsers()) {
     return (
@@ -81,7 +89,8 @@ const RegisterUser = ({ onClose, onSuccess }) => {
         left: 0,
         right: 0,
         bottom: 0,
-        background: 'rgba(0,0,0,0.5)',
+        background: 'rgba(15, 23, 42, 0.6)',
+        backdropFilter: 'blur(8px)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -91,14 +100,15 @@ const RegisterUser = ({ onClose, onSuccess }) => {
         <div style={{
           background: 'white',
           padding: '40px',
-          borderRadius: '12px',
+          borderRadius: '16px',
           maxWidth: '400px',
           width: '100%',
-          textAlign: 'center'
+          textAlign: 'center',
+          boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)'
         }}>
-          <div style={{ fontSize: '48px', marginBottom: '16px' }}>🚫</div>
-          <h3 style={{ color: '#dc2626', margin: '0 0 8px 0' }}>Access Denied</h3>
-          <p style={{ color: '#64748b', margin: '0 0 20px 0' }}>
+          <div style={{ fontSize: '64px', marginBottom: '16px' }}>🚫</div>
+          <h3 style={{ color: '#dc2626', margin: '0 0 8px 0', fontSize: '22px' }}>Access Denied</h3>
+          <p style={{ color: '#64748b', margin: '0 0 24px 0', fontSize: '15px' }}>
             You don't have permission to manage users.
             <br />
             <small style={{ color: '#94a3b8' }}>
@@ -108,13 +118,18 @@ const RegisterUser = ({ onClose, onSuccess }) => {
           <button
             onClick={onClose}
             style={{
-              padding: '10px 24px',
-              background: '#64748b',
-              color: 'white',
+              padding: '10px 32px',
+              background: '#f1f5f9',
+              color: '#475569',
               border: 'none',
-              borderRadius: '6px',
-              cursor: 'pointer'
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: '600',
+              transition: 'background 0.2s'
             }}
+            onMouseEnter={(e) => e.target.style.background = '#e2e8f0'}
+            onMouseLeave={(e) => e.target.style.background = '#f1f5f9'}
           >
             Close
           </button>
@@ -131,22 +146,28 @@ const RegisterUser = ({ onClose, onSuccess }) => {
     setMessageType('info');
     setShowSuccess(false);
 
+    // Validate that role and team are selected
+    if (!formData.role || !formData.team) {
+      setMessage('Please select both Role and Team');
+      setMessageType('error');
+      setLoading(false);
+      return;
+    }
+
     try {
       const result = await registerUser(formData);
       
       if (result.success) {
-        setMessage(result.message);
         setTempPassword(result.tempPassword);
         setMessageType('success');
         setShowSuccess(true);
         setRegisteredUser(result.user);
         
-        // Reset form fields
         setFormData({
           email: '',
           name: '',
-          role: 'panelist',
-          team: 'panel_r1'
+          role: '',
+          team: ''
         });
 
         if (onSuccess) {
@@ -180,7 +201,6 @@ const RegisterUser = ({ onClose, onSuccess }) => {
         throw new Error('Password must be at least 6 characters');
       }
 
-      // Create auth user for existing hr_user
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: selectedUser.email,
         password: password,
@@ -196,13 +216,11 @@ const RegisterUser = ({ onClose, onSuccess }) => {
         throw new Error('Failed to create auth user: ' + authError.message);
       }
 
-      // Update hr_user with the auth user ID
       await supabase
         .from('hr_users')
         .update({ id: authData.user.id })
         .eq('email', selectedUser.email);
 
-      // Log to audit_logs
       await supabase
         .from('audit_logs')
         .insert({
@@ -220,10 +238,8 @@ const RegisterUser = ({ onClose, onSuccess }) => {
       setMessage(`✅ Password set successfully for ${selectedUser.name}! They can now login.`);
       setMessageType('success');
       
-      // Remove from list
       setUsersWithoutAuth(prev => prev.filter(u => u.email !== selectedUser.email));
       
-      // If there are more users, select the next one
       const remaining = usersWithoutAuth.filter(u => u.email !== selectedUser.email);
       if (remaining.length > 0) {
         setSelectedUser(remaining[0]);
@@ -248,8 +264,8 @@ const RegisterUser = ({ onClose, onSuccess }) => {
   const copyToClipboard = () => {
     if (tempPassword) {
       navigator.clipboard.writeText(tempPassword);
-      setMessage('✅ Password copied to clipboard!');
-      setMessageType('info');
+      setToastMessage('✅ Password copied to clipboard!');
+      setShowToast(true);
     }
   };
 
@@ -262,7 +278,8 @@ const RegisterUser = ({ onClose, onSuccess }) => {
         left: 0,
         right: 0,
         bottom: 0,
-        background: 'rgba(0,0,0,0.5)',
+        background: 'rgba(15, 23, 42, 0.6)',
+        backdropFilter: 'blur(8px)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -272,31 +289,34 @@ const RegisterUser = ({ onClose, onSuccess }) => {
         <div style={{
           background: 'white',
           padding: '32px',
-          borderRadius: '12px',
+          borderRadius: '16px',
           maxWidth: '480px',
           width: '100%',
           maxHeight: '90vh',
           overflowY: 'auto',
-          boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+          overflowX: 'visible',
+          boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
           position: 'relative'
         }}>
           <button
             onClick={handleClose}
             style={{
-              position: 'absolute',
-              top: '12px',
-              right: '12px',
+              position: 'sticky',
+              top: '0',
+              right: '0',
+              float: 'right',
               background: 'none',
               border: 'none',
               fontSize: '24px',
               cursor: 'pointer',
               color: '#94a3b8',
               padding: '4px 8px',
-              borderRadius: '4px',
-              transition: 'background 0.2s'
+              borderRadius: '8px',
+              transition: 'all 0.2s',
+              zIndex: 10
             }}
-            onMouseEnter={(e) => e.target.style.background = '#f1f5f9'}
-            onMouseLeave={(e) => e.target.style.background = 'none'}
+            onMouseEnter={(e) => { e.target.style.background = '#f1f5f9'; e.target.style.color = '#475569'; }}
+            onMouseLeave={(e) => { e.target.style.background = 'none'; e.target.style.color = '#94a3b8'; }}
           >
             ✕
           </button>
@@ -328,14 +348,14 @@ const RegisterUser = ({ onClose, onSuccess }) => {
           {message && (
             <div style={{
               padding: '12px 16px',
-              borderRadius: '6px',
+              borderRadius: '8px',
               marginBottom: '20px',
               fontSize: '14px',
               background: messageType === 'success' ? '#f0fdf4' : 
                         messageType === 'error' ? '#fef2f2' : '#eff6ff',
-              borderLeft: `4px solid ${
-                messageType === 'success' ? '#22c55e' : 
-                messageType === 'error' ? '#ef4444' : '#3b82f6'
+              border: `1px solid ${
+                messageType === 'success' ? '#bbf7d0' : 
+                messageType === 'error' ? '#fecaca' : '#bfdbfe'
               }`,
               color: messageType === 'success' ? '#166534' : 
                      messageType === 'error' ? '#991b1b' : '#1e40af'
@@ -351,7 +371,7 @@ const RegisterUser = ({ onClose, onSuccess }) => {
                 fontSize: '13px',
                 fontWeight: '600',
                 color: '#475569',
-                marginBottom: '4px'
+                marginBottom: '6px'
               }}>
                 User Name
               </label>
@@ -361,11 +381,11 @@ const RegisterUser = ({ onClose, onSuccess }) => {
                 disabled
                 style={{
                   width: '100%',
-                  padding: '10px 14px',
-                  border: '1px solid #cbd5e1',
-                  borderRadius: '6px',
+                  padding: '12px 16px',
+                  border: '2px solid #e2e8f0',
+                  borderRadius: '10px',
                   fontSize: '14px',
-                  background: '#f1f5f9',
+                  background: '#f8fafc',
                   color: '#475569',
                   boxSizing: 'border-box'
                 }}
@@ -378,7 +398,7 @@ const RegisterUser = ({ onClose, onSuccess }) => {
                 fontSize: '13px',
                 fontWeight: '600',
                 color: '#475569',
-                marginBottom: '4px'
+                marginBottom: '6px'
               }}>
                 Email
               </label>
@@ -388,11 +408,11 @@ const RegisterUser = ({ onClose, onSuccess }) => {
                 disabled
                 style={{
                   width: '100%',
-                  padding: '10px 14px',
-                  border: '1px solid #cbd5e1',
-                  borderRadius: '6px',
+                  padding: '12px 16px',
+                  border: '2px solid #e2e8f0',
+                  borderRadius: '10px',
                   fontSize: '14px',
-                  background: '#f1f5f9',
+                  background: '#f8fafc',
                   color: '#475569',
                   boxSizing: 'border-box'
                 }}
@@ -405,7 +425,7 @@ const RegisterUser = ({ onClose, onSuccess }) => {
                 fontSize: '13px',
                 fontWeight: '600',
                 color: '#475569',
-                marginBottom: '4px'
+                marginBottom: '6px'
               }}>
                 Role
               </label>
@@ -415,11 +435,11 @@ const RegisterUser = ({ onClose, onSuccess }) => {
                 disabled
                 style={{
                   width: '100%',
-                  padding: '10px 14px',
-                  border: '1px solid #cbd5e1',
-                  borderRadius: '6px',
+                  padding: '12px 16px',
+                  border: '2px solid #e2e8f0',
+                  borderRadius: '10px',
                   fontSize: '14px',
-                  background: '#f1f5f9',
+                  background: '#f8fafc',
                   color: '#475569',
                   boxSizing: 'border-box'
                 }}
@@ -432,7 +452,7 @@ const RegisterUser = ({ onClose, onSuccess }) => {
                 fontSize: '13px',
                 fontWeight: '600',
                 color: '#475569',
-                marginBottom: '4px'
+                marginBottom: '6px'
               }}>
                 Set Password *
               </label>
@@ -444,16 +464,26 @@ const RegisterUser = ({ onClose, onSuccess }) => {
                 minLength="6"
                 style={{
                   width: '100%',
-                  padding: '10px 14px',
-                  border: '1px solid #cbd5e1',
-                  borderRadius: '6px',
+                  padding: '12px 16px',
+                  border: '2px solid #e2e8f0',
+                  borderRadius: '10px',
                   fontSize: '14px',
                   outline: 'none',
                   boxSizing: 'border-box',
-                  transition: 'border-color 0.2s'
+                  transition: 'border-color 0.2s, box-shadow 0.2s',
+                  color: '#1a202c',
+                  background: '#fafafa'
                 }}
-                onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
-                onBlur={(e) => e.target.style.borderColor = '#cbd5e1'}
+                onFocus={(e) => {
+                  e.target.style.borderColor = '#3b82f6';
+                  e.target.style.boxShadow = '0 0 0 4px rgba(59, 130, 246, 0.1)';
+                  e.target.style.background = '#fff';
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = '#e2e8f0';
+                  e.target.style.boxShadow = 'none';
+                  e.target.style.background = '#fafafa';
+                }}
               />
               <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '4px' }}>
                 Password must be at least 6 characters
@@ -473,7 +503,7 @@ const RegisterUser = ({ onClose, onSuccess }) => {
                   background: '#f1f5f9',
                   color: '#475569',
                   border: 'none',
-                  borderRadius: '6px',
+                  borderRadius: '10px',
                   fontSize: '14px',
                   fontWeight: '600',
                   cursor: 'pointer',
@@ -493,7 +523,7 @@ const RegisterUser = ({ onClose, onSuccess }) => {
                   background: loading ? '#94a3b8' : '#10b981',
                   color: 'white',
                   border: 'none',
-                  borderRadius: '6px',
+                  borderRadius: '10px',
                   fontSize: '14px',
                   fontWeight: '600',
                   cursor: loading ? 'not-allowed' : 'pointer',
@@ -546,347 +576,514 @@ const RegisterUser = ({ onClose, onSuccess }) => {
       left: 0,
       right: 0,
       bottom: 0,
-      background: 'rgba(0,0,0,0.5)',
+      background: 'rgba(15, 23, 42, 0.6)',
+      backdropFilter: 'blur(8px)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
       zIndex: 1000,
       padding: '20px'
     }}>
+      {/* Toast Notification */}
+      {showToast && (
+        <div style={{
+          position: 'fixed',
+          top: '30px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          background: '#1e293b',
+          color: 'white',
+          padding: '14px 28px',
+          borderRadius: '12px',
+          fontSize: '15px',
+          fontWeight: '500',
+          boxShadow: '0 10px 40px rgba(0,0,0,0.3)',
+          zIndex: 9999,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+          animation: 'slideDown 0.4s ease-out',
+          border: '1px solid rgba(255,255,255,0.1)'
+        }}>
+          <span style={{ fontSize: '20px' }}>📋</span>
+          {toastMessage}
+          <button
+            onClick={() => setShowToast(false)}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#94a3b8',
+              cursor: 'pointer',
+              fontSize: '18px',
+              padding: '0 0 0 12px',
+              transition: 'color 0.2s'
+            }}
+            onMouseEnter={(e) => e.target.style.color = '#fff'}
+            onMouseLeave={(e) => e.target.style.color = '#94a3b8'}
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
+      <style>{`
+        @keyframes slideDown {
+          from {
+            opacity: 0;
+            transform: translateX(-50%) translateY(-20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+          }
+        }
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(-20px) scale(0.98); }
+          to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
+
       <div style={{
         background: 'white',
-        padding: '32px',
-        borderRadius: '12px',
+        padding: '40px 36px',
+        borderRadius: '20px',
         maxWidth: '520px',
         width: '100%',
         maxHeight: '90vh',
         overflowY: 'auto',
-        boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
-        position: 'relative'
+        overflowX: 'visible',
+        boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
+        position: 'relative',
+        animation: 'fadeIn 0.3s ease-out'
       }}>
+        {/* Close Button */}
         <button
           onClick={handleClose}
           style={{
-            position: 'absolute',
-            top: '12px',
-            right: '12px',
+            position: 'sticky',
+            top: '0',
+            right: '0',
+            float: 'right',
             background: 'none',
             border: 'none',
             fontSize: '24px',
             cursor: 'pointer',
             color: '#94a3b8',
             padding: '4px 8px',
-            borderRadius: '4px',
-            transition: 'background 0.2s'
+            borderRadius: '8px',
+            transition: 'all 0.2s',
+            zIndex: 10
           }}
-          onMouseEnter={(e) => e.target.style.background = '#f1f5f9'}
-          onMouseLeave={(e) => e.target.style.background = 'none'}
+          onMouseEnter={(e) => { e.target.style.background = '#f1f5f9'; e.target.style.color = '#475569'; }}
+          onMouseLeave={(e) => { e.target.style.background = 'none'; e.target.style.color = '#94a3b8'; }}
         >
           ✕
         </button>
 
-        <h2 style={{
-          margin: '0 0 8px 0',
-          color: '#1e293b',
-          fontSize: '24px',
-          fontWeight: '700'
-        }}>
-          Register New User
-        </h2>
-        <p style={{
-          margin: '0 0 24px 0',
-          color: '#64748b',
-          fontSize: '14px'
-        }}>
-          Create a new team member account. A temporary password will be generated.
-        </p>
+        {/* Header */}
+        <div style={{ marginBottom: '28px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '4px' }}>
+            <span style={{ fontSize: '32px' }}>👤</span>
+            <h2 style={{
+              margin: 0,
+              color: '#0f172a',
+              fontSize: '24px',
+              fontWeight: '700'
+            }}>
+              Register New User
+            </h2>
+          </div>
+          <p style={{
+            margin: '4px 0 0 0',
+            color: '#64748b',
+            fontSize: '14px',
+            paddingLeft: '44px'
+          }}>
+            Create a new team member account. A temporary password will be generated.
+          </p>
+        </div>
 
-        {message && (
+        {/* Error/Info Message */}
+        {message && !showSuccess && (
           <div style={{
             padding: '12px 16px',
-            borderRadius: '6px',
+            borderRadius: '10px',
             marginBottom: '20px',
             fontSize: '14px',
-            background: messageType === 'success' ? '#f0fdf4' : 
-                      messageType === 'error' ? '#fef2f2' : '#eff6ff',
-            borderLeft: `4px solid ${
-              messageType === 'success' ? '#22c55e' : 
-              messageType === 'error' ? '#ef4444' : '#3b82f6'
-            }`,
-            color: messageType === 'success' ? '#166534' : 
-                   messageType === 'error' ? '#991b1b' : '#1e40af'
+            background: messageType === 'error' ? '#fef2f2' : '#eff6ff',
+            border: `1px solid ${messageType === 'error' ? '#fecaca' : '#bfdbfe'}`,
+            color: messageType === 'error' ? '#991b1b' : '#1e40af',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
           }}>
+            <span>{messageType === 'error' ? '❌' : 'ℹ️'}</span>
             {message}
           </div>
         )}
 
-        {/* SUCCESS SECTION - Shows until user closes the modal */}
+        {/* SUCCESS SECTION */}
         {showSuccess && tempPassword && (
           <div style={{
-            padding: '20px',
-            borderRadius: '8px',
-            marginBottom: '20px',
-            background: '#f0fdf4',
-            border: '2px solid #22c55e',
+            padding: '24px',
+            borderRadius: '12px',
+            marginBottom: '24px',
+            background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)',
+            border: '2px solid #86efac',
             textAlign: 'center'
           }}>
-            <div style={{ fontSize: '48px', marginBottom: '8px' }}>🎉</div>
-            <h3 style={{ margin: '0 0 8px 0', color: '#166534' }}>
+            <div style={{ fontSize: '40px', marginBottom: '8px' }}>🎉</div>
+            <h3 style={{ margin: '0 0 16px 0', color: '#166534', fontSize: '20px' }}>
               User Registered Successfully!
             </h3>
-            <p style={{ margin: '0 0 12px 0', color: '#166534', fontSize: '14px' }}>
-              <strong>Name:</strong> {registeredUser?.name || formData.name}
-            </p>
-            <p style={{ margin: '0 0 12px 0', color: '#166534', fontSize: '14px' }}>
-              <strong>Email:</strong> {registeredUser?.email || formData.email}
-            </p>
             
             <div style={{
-              background: '#f1f5f9',
-              padding: '12px',
-              borderRadius: '6px',
-              marginBottom: '12px'
+              display: 'grid',
+              gridTemplateColumns: 'auto 1fr',
+              gap: '6px 16px',
+              marginBottom: '16px',
+              textAlign: 'left',
+              fontSize: '14px',
+              background: 'rgba(255,255,255,0.7)',
+              padding: '12px 16px',
+              borderRadius: '8px'
             }}>
-              <p style={{ margin: '0 0 4px 0', fontSize: '13px', color: '#475569' }}>
-                <strong>Temporary Password:</strong>
+              <span style={{ color: '#475569', fontWeight: '500' }}>Name:</span>
+              <span style={{ color: '#0f172a', fontWeight: '600' }}>{registeredUser?.name || formData.name}</span>
+              <span style={{ color: '#475569', fontWeight: '500' }}>Email:</span>
+              <span style={{ color: '#0f172a', fontWeight: '600' }}>{registeredUser?.email || formData.email}</span>
+            </div>
+            
+            <div style={{
+              background: '#fff',
+              padding: '16px',
+              borderRadius: '10px',
+              marginBottom: '16px',
+              border: '1px solid #bbf7d0'
+            }}>
+              <p style={{ margin: '0 0 6px 0', fontSize: '13px', color: '#475569' }}>
+                🔑 Temporary Password
               </p>
               <code style={{
                 display: 'block',
-                fontSize: '20px',
+                fontSize: '22px',
                 fontWeight: '700',
-                color: '#1e293b',
+                color: '#0f172a',
                 padding: '8px',
-                background: 'white',
-                borderRadius: '4px',
-                letterSpacing: '1px'
+                background: '#f8fafc',
+                borderRadius: '6px',
+                letterSpacing: '1px',
+                fontFamily: 'monospace'
               }}>
                 {tempPassword}
               </code>
             </div>
 
-            <div style={{
-              display: 'flex',
-              gap: '10px',
-              justifyContent: 'center',
-              flexWrap: 'wrap'
-            }}>
-              <button
-                onClick={copyToClipboard}
-                style={{
-                  padding: '8px 20px',
-                  background: '#3b82f6',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  fontWeight: '500'
-                }}
-              >
-                📋 Copy Password
-              </button>
-            </div>
+            <button
+              onClick={copyToClipboard}
+              style={{
+                padding: '10px 24px',
+                background: '#2563eb',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: '500',
+                transition: 'background 0.2s',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}
+              onMouseEnter={(e) => e.target.style.background = '#1d4ed8'}
+              onMouseLeave={(e) => e.target.style.background = '#2563eb'}
+            >
+              📋 Copy Password
+            </button>
 
             <div style={{
-              marginTop: '12px',
-              padding: '8px 12px',
+              marginTop: '14px',
+              padding: '8px 14px',
               background: '#fef3c7',
-              borderRadius: '4px',
+              borderRadius: '8px',
               fontSize: '12px',
-              color: '#92400e'
+              color: '#92400e',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              justifyContent: 'center'
             }}>
-              ⚠️ <strong>Important:</strong> Share this password with the user. 
-              They should change it after their first login.
+              ⚠️ Share this password with the user. They should change it after their first login.
             </div>
           </div>
         )}
 
-        <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{
-              display: 'block',
-              fontSize: '13px',
-              fontWeight: '600',
-              color: '#475569',
-              marginBottom: '4px'
-            }}>
-              Full Name *
-            </label>
-            <input
-              type="text"
-              placeholder="Enter full name"
-              value={formData.name}
-              onChange={(e) => setFormData({...formData, name: e.target.value})}
-              required
-              style={{
-                width: '100%',
-                padding: '10px 14px',
-                border: '1px solid #cbd5e1',
-                borderRadius: '6px',
-                fontSize: '14px',
-                outline: 'none',
-                boxSizing: 'border-box',
-                transition: 'border-color 0.2s'
-              }}
-              onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
-              onBlur={(e) => e.target.style.borderColor = '#cbd5e1'}
-            />
-          </div>
-
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{
-              display: 'block',
-              fontSize: '13px',
-              fontWeight: '600',
-              color: '#475569',
-              marginBottom: '4px'
-            }}>
-              Email Address *
-            </label>
-            <input
-              type="email"
-              placeholder="Enter email address"
-              value={formData.email}
-              onChange={(e) => setFormData({...formData, email: e.target.value})}
-              required
-              style={{
-                width: '100%',
-                padding: '10px 14px',
-                border: '1px solid #cbd5e1',
-                borderRadius: '6px',
-                fontSize: '14px',
-                outline: 'none',
-                boxSizing: 'border-box',
-                transition: 'border-color 0.2s'
-              }}
-              onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
-              onBlur={(e) => e.target.style.borderColor = '#cbd5e1'}
-            />
-          </div>
-
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{
-              display: 'block',
-              fontSize: '13px',
-              fontWeight: '600',
-              color: '#475569',
-              marginBottom: '4px'
-            }}>
-              Role *
-            </label>
-            <select
-              value={formData.role}
-              onChange={(e) => setFormData({...formData, role: e.target.value})}
-              required
-              style={{
-                width: '100%',
-                padding: '10px 14px',
-                border: '1px solid #cbd5e1',
-                borderRadius: '6px',
-                fontSize: '14px',
-                outline: 'none',
-                boxSizing: 'border-box',
-                background: 'white',
-                transition: 'border-color 0.2s'
-              }}
-              onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
-              onBlur={(e) => e.target.style.borderColor = '#cbd5e1'}
-            >
-              <option value="panelist">Panelist</option>
-              <option value="assignment_team">Assignment Team</option>
-              <option value="scheduling_team">Scheduling Team</option>
-            </select>
-          </div>
-
-          <div style={{ marginBottom: '24px' }}>
-            <label style={{
-              display: 'block',
-              fontSize: '13px',
-              fontWeight: '600',
-              color: '#475569',
-              marginBottom: '4px'
-            }}>
-              Team *
-            </label>
-            <select
-              value={formData.team}
-              onChange={(e) => setFormData({...formData, team: e.target.value})}
-              required
-              style={{
-                width: '100%',
-                padding: '10px 14px',
-                border: '1px solid #cbd5e1',
-                borderRadius: '6px',
-                fontSize: '14px',
-                outline: 'none',
-                boxSizing: 'border-box',
-                background: 'white',
-                transition: 'border-color 0.2s'
-              }}
-              onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
-              onBlur={(e) => e.target.style.borderColor = '#cbd5e1'}
-            >
-              <option value="panel_r1">Panel R1</option>
-              <option value="panel_r2">Panel R2</option>
-              <option value="assignment">Assignment</option>
-              <option value="scheduling">Scheduling</option>
-            </select>
-          </div>
-
-          <div style={{
-            display: 'flex',
-            gap: '12px'
-          }}>
-            <button
-              type="button"
-              onClick={handleClose}
-              style={{
-                flex: 1,
-                padding: '12px',
-                background: '#f1f5f9',
+        {/* Form */}
+        {!showSuccess && (
+          <form onSubmit={handleSubmit}>
+            <div style={{ marginBottom: '18px' }}>
+              <label style={{
+                display: 'block',
+                fontSize: '13px',
+                fontWeight: '600',
                 color: '#475569',
-                border: 'none',
-                borderRadius: '6px',
-                fontSize: '14px',
-                fontWeight: '600',
-                cursor: 'pointer',
-                transition: 'background 0.2s'
-              }}
-              onMouseEnter={(e) => e.target.style.background = '#e2e8f0'}
-              onMouseLeave={(e) => e.target.style.background = '#f1f5f9'}
-            >
-              {showSuccess ? 'Done' : 'Cancel'}
-            </button>
-            <button
-              type="submit"
-              disabled={loading || showSuccess}
-              style={{
-                flex: 2,
-                padding: '12px',
-                background: loading || showSuccess ? '#94a3b8' : '#3b82f6',
-                color: 'white',
-                border: 'none',
-                borderRadius: '6px',
-                fontSize: '14px',
-                fontWeight: '600',
-                cursor: loading || showSuccess ? 'not-allowed' : 'pointer',
-                transition: 'background 0.2s',
-                opacity: loading || showSuccess ? 0.7 : 1
-              }}
-              onMouseEnter={(e) => {
-                if (!loading && !showSuccess) e.target.style.background = '#2563eb';
-              }}
-              onMouseLeave={(e) => {
-                if (!loading && !showSuccess) e.target.style.background = '#3b82f6';
-              }}
-            >
-              {loading ? 'Registering...' : showSuccess ? '✅ Registered!' : 'Register User'}
-            </button>
-          </div>
-        </form>
+                marginBottom: '6px'
+              }}>
+                Full Name <span style={{ color: '#ef4444' }}>*</span>
+              </label>
+              <input
+                type="text"
+                placeholder="Enter full name"
+                value={formData.name}
+                onChange={(e) => setFormData({...formData, name: e.target.value})}
+                required
+                style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  border: '2px solid #e2e8f0',
+                  borderRadius: '10px',
+                  fontSize: '14px',
+                  outline: 'none',
+                  boxSizing: 'border-box',
+                  transition: 'border-color 0.2s, box-shadow 0.2s',
+                  color: '#1a202c',
+                  background: '#fafafa'
+                }}
+                onFocus={(e) => {
+                  e.target.style.borderColor = '#3b82f6';
+                  e.target.style.boxShadow = '0 0 0 4px rgba(59, 130, 246, 0.1)';
+                  e.target.style.background = '#fff';
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = '#e2e8f0';
+                  e.target.style.boxShadow = 'none';
+                  e.target.style.background = '#fafafa';
+                }}
+              />
+            </div>
 
+            <div style={{ marginBottom: '18px' }}>
+              <label style={{
+                display: 'block',
+                fontSize: '13px',
+                fontWeight: '600',
+                color: '#475569',
+                marginBottom: '6px'
+              }}>
+                Email Address <span style={{ color: '#ef4444' }}>*</span>
+              </label>
+              <input
+                type="email"
+                placeholder="Enter email address"
+                value={formData.email}
+                onChange={(e) => setFormData({...formData, email: e.target.value})}
+                required
+                style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  border: '2px solid #e2e8f0',
+                  borderRadius: '10px',
+                  fontSize: '14px',
+                  outline: 'none',
+                  boxSizing: 'border-box',
+                  transition: 'border-color 0.2s, box-shadow 0.2s',
+                  color: '#1a202c',
+                  background: '#fafafa'
+                }}
+                onFocus={(e) => {
+                  e.target.style.borderColor = '#3b82f6';
+                  e.target.style.boxShadow = '0 0 0 4px rgba(59, 130, 246, 0.1)';
+                  e.target.style.background = '#fff';
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = '#e2e8f0';
+                  e.target.style.boxShadow = 'none';
+                  e.target.style.background = '#fafafa';
+                }}
+              />
+            </div>
+
+            <div style={{ marginBottom: '18px', position: 'relative' }}>
+              <label style={{
+                display: 'block',
+                fontSize: '13px',
+                fontWeight: '600',
+                color: '#475569',
+                marginBottom: '6px'
+              }}>
+                Role <span style={{ color: '#ef4444' }}>*</span>
+              </label>
+              <div style={{ position: 'relative' }}>
+                <select
+                  value={formData.role}
+                  onChange={(e) => setFormData({...formData, role: e.target.value})}
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    paddingRight: '40px',
+                    border: '2px solid #e2e8f0',
+                    borderRadius: '10px',
+                    fontSize: '14px',
+                    outline: 'none',
+                    boxSizing: 'border-box',
+                    background: formData.role ? '#fff' : '#fafafa',
+                    color: formData.role ? '#1a202c' : '#94a3b8',
+                    transition: 'border-color 0.2s, box-shadow 0.2s',
+                    appearance: 'auto',
+                    WebkitAppearance: 'auto',
+                    MozAppearance: 'auto',
+                    cursor: 'pointer',
+                    minHeight: '48px'
+                  }}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = '#3b82f6';
+                    e.target.style.boxShadow = '0 0 0 4px rgba(59, 130, 246, 0.1)';
+                    e.target.style.background = '#fff';
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = '#e2e8f0';
+                    e.target.style.boxShadow = 'none';
+                    if (!formData.role) e.target.style.background = '#fafafa';
+                  }}
+                >
+                  <option value="">Select Role</option>
+                  <option value="panelist">Panelist</option>
+                  <option value="assignment_team">Assignment Team</option>
+                  <option value="scheduling_team">Scheduling Team</option>
+                </select>
+              </div>
+            </div>
+
+            <div style={{ marginBottom: '24px', position: 'relative' }}>
+              <label style={{
+                display: 'block',
+                fontSize: '13px',
+                fontWeight: '600',
+                color: '#475569',
+                marginBottom: '6px'
+              }}>
+                Team <span style={{ color: '#ef4444' }}>*</span>
+              </label>
+              <div style={{ position: 'relative' }}>
+                <select
+                  value={formData.team}
+                  onChange={(e) => setFormData({...formData, team: e.target.value})}
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    paddingRight: '40px',
+                    border: '2px solid #e2e8f0',
+                    borderRadius: '10px',
+                    fontSize: '14px',
+                    outline: 'none',
+                    boxSizing: 'border-box',
+                    background: formData.team ? '#fff' : '#fafafa',
+                    color: formData.team ? '#1a202c' : '#94a3b8',
+                    transition: 'border-color 0.2s, box-shadow 0.2s',
+                    appearance: 'auto',
+                    WebkitAppearance: 'auto',
+                    MozAppearance: 'auto',
+                    cursor: 'pointer',
+                    minHeight: '48px'
+                  }}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = '#3b82f6';
+                    e.target.style.boxShadow = '0 0 0 4px rgba(59, 130, 246, 0.1)';
+                    e.target.style.background = '#fff';
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = '#e2e8f0';
+                    e.target.style.boxShadow = 'none';
+                    if (!formData.team) e.target.style.background = '#fafafa';
+                  }}
+                >
+                  <option value="">Select Team</option>
+                  <option value="panel_r1">Panel R1</option>
+                  <option value="panel_r2">Panel R2</option>
+                  <option value="assignment">Assignment</option>
+                  <option value="scheduling">Scheduling</option>
+                </select>
+              </div>
+            </div>
+
+            <div style={{
+              display: 'flex',
+              gap: '12px'
+            }}>
+              <button
+                type="button"
+                onClick={handleClose}
+                style={{
+                  flex: 1,
+                  padding: '12px 20px',
+                  background: '#f1f5f9',
+                  color: '#475569',
+                  border: 'none',
+                  borderRadius: '10px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => { e.target.style.background = '#e2e8f0'; e.target.style.color = '#1e293b'; }}
+                onMouseLeave={(e) => { e.target.style.background = '#f1f5f9'; e.target.style.color = '#475569'; }}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={loading}
+                style={{
+                  flex: 2,
+                  padding: '12px 20px',
+                  background: loading ? '#94a3b8' : 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '10px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: loading ? 'not-allowed' : 'pointer',
+                  transition: 'all 0.2s',
+                  opacity: loading ? 0.7 : 1
+                }}
+                onMouseEnter={(e) => {
+                  if (!loading) {
+                    e.target.style.transform = 'scale(1.01)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!loading) {
+                    e.target.style.transform = 'scale(1)';
+                  }
+                }}
+              >
+                {loading ? (
+                  <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                    <span style={{
+                      display: 'inline-block',
+                      width: '16px',
+                      height: '16px',
+                      border: '2px solid rgba(255,255,255,0.3)',
+                      borderTop: '2px solid white',
+                      borderRadius: '50%',
+                      animation: 'spin 0.8s linear infinite'
+                    }} />
+                    Registering...
+                  </span>
+                ) : 'Register User'}
+              </button>
+            </div>
+          </form>
+        )}
+
+        {/* Footer */}
         <div style={{
-          marginTop: '16px',
+          marginTop: '20px',
           paddingTop: '16px',
           borderTop: '1px solid #f1f5f9',
           display: 'flex',
@@ -894,15 +1091,28 @@ const RegisterUser = ({ onClose, onSuccess }) => {
           alignItems: 'center'
         }}>
           <span style={{
-            fontSize: '11px',
-            color: '#94a3b8'
+            fontSize: '12px',
+            color: '#94a3b8',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px'
           }}>
+            <span style={{
+              display: 'inline-block',
+              width: '6px',
+              height: '6px',
+              borderRadius: '50%',
+              background: '#10b981'
+            }} />
             {user?.name} ({user?.role})
           </span>
           <span style={{
-            fontSize: '11px',
+            fontSize: '12px',
             color: '#10b981',
-            fontWeight: '600'
+            fontWeight: '600',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px'
           }}>
             ✓ Can register users
           </span>

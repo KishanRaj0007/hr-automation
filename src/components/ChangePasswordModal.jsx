@@ -176,7 +176,7 @@ const ChangePasswordModal = ({ onClose }) => {
         </button>
 
         <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-          <div style={{ fontSize: '48px', marginBottom: '8px' }}>🔑</div>
+          <div style={{ fontSize: '30px', marginBottom: '8px' }}>🔑</div>
           <h2 style={{ margin: '0', color: '#1e293b', fontSize: '22px', fontWeight: '700' }}>
             Change Password
           </h2>
