@@ -1374,7 +1374,7 @@ export default function CandidatePortalPage() {
               {/* Referral Details (conditional) */}
               {regForm.source === 'Referral' && (
                 <div style={{ marginBottom: '16px', background: '#f0fdf4', padding: '12px 14px', borderRadius: '6px', border: '1px solid #bbf7d0' }}>
-                  <h4 style={{ fontSize: '12px', fontWeight: '700', color: '#065f46', margin: '0 0 8px 0' }}>🤝 Referral Details</h4>
+                  <h4 style={{ fontSize: '12px', fontWeight: '700', color: '#065f46', margin: '0 0 8px 0' }}>Referral Details</h4>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 12px' }}>
                     <div style={{ marginBottom: '6px' }}>
                       <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', color: '#475569', marginBottom: '2px' }}>Referrer's Name <span style={{ color: '#ef4444' }}>*</span></label>
