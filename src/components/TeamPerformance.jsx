@@ -1,4 +1,4 @@
-// components/TeamPerformance.jsx - COMPLETE WITH WAITLIST LOGIC
+// components/TeamPerformance.jsx - WITH CALENDAR-BASED TIMEFRAMES
 import { useEffect, useState } from 'react';
 import { supabase } from '../services/supabase';
 import { useAuth } from '../context/AuthContext';
@@ -7,6 +7,9 @@ function TeamPerformance() {
   const { userRole, isAdmin, isHR, user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [timeframe, setTimeframe] = useState('today');
+  const [selectedMonth, setSelectedMonth] = useState(null);
+  const [selectedQuarter, setSelectedQuarter] = useState(null);
+  const [selectedWeek, setSelectedWeek] = useState(null);
   const [teamData, setTeamData] = useState({
     assignmentTeam: [],
     schedulingTeam: [],
@@ -21,20 +24,172 @@ function TeamPerformance() {
     }
   });
 
+  // Get current month and week
+  useEffect(() => {
+    const now = new Date();
+    setSelectedMonth(now.getMonth());
+    setSelectedQuarter(getCurrentQuarter(now));
+    setSelectedWeek(getCurrentWeekNumber(now));
+  }, []);
+
   useEffect(() => {
     fetchTeamPerformance();
-  }, [timeframe]);
+  }, [timeframe, selectedMonth, selectedQuarter, selectedWeek]);
+
+  function getCurrentQuarter(date) {
+    const month = date.getMonth();
+    return Math.floor(month / 3);
+  }
+
+  function getCurrentWeekNumber(date) {
+    const firstDayOfYear = new Date(date.getFullYear(), 0, 1);
+    const pastDaysOfYear = (date - firstDayOfYear) / 86400000;
+    return Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1) / 7);
+  }
+
+  function getWeekRange(weekNumber, year) {
+    const firstDayOfYear = new Date(year, 0, 1);
+    const daysOffset = (weekNumber - 1) * 7 - firstDayOfYear.getDay();
+    const start = new Date(year, 0, 1 + daysOffset);
+    const end = new Date(start);
+    end.setDate(start.getDate() + 6);
+    return { start, end };
+  }
+
+  function getDateRange(timeframe, month, quarter, week) {
+    const now = new Date();
+    const year = now.getFullYear();
+    let start = new Date();
+    let end = new Date();
+
+    switch(timeframe) {
+      case 'today': {
+        start.setHours(0, 0, 0, 0);
+        end.setHours(23, 59, 59, 999);
+        break;
+      }
+      case 'week': {
+        // Get current week (Sunday to Saturday)
+        const currentDay = now.getDay();
+        const diffToSunday = currentDay;
+        start = new Date(now);
+        start.setDate(now.getDate() - diffToSunday);
+        start.setHours(0, 0, 0, 0);
+        end = new Date(start);
+        end.setDate(start.getDate() + 6);
+        end.setHours(23, 59, 59, 999);
+        break;
+      }
+      case 'month': {
+        const selectedMonthNum = month !== null ? month : now.getMonth();
+        start = new Date(year, selectedMonthNum, 1);
+        end = new Date(year, selectedMonthNum + 1, 0);
+        end.setHours(23, 59, 59, 999);
+        break;
+      }
+      case 'quarter': {
+        const selectedQuarterNum = quarter !== null ? quarter : getCurrentQuarter(now);
+        const quarterStartMonth = selectedQuarterNum * 3;
+        start = new Date(year, quarterStartMonth, 1);
+        end = new Date(year, quarterStartMonth + 3, 0);
+        end.setHours(23, 59, 59, 999);
+        break;
+      }
+      default: {
+        return { start: null, end: null };
+      }
+    }
+
+    return {
+      start: start.toISOString(),
+      end: end.toISOString()
+    };
+  }
+
+  function getTimeframeLabel(timeframe, month, quarter, week) {
+    const now = new Date();
+    const year = now.getFullYear();
+    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    const quarterNames = ['Q1 (Jan-Mar)', 'Q2 (Apr-Jun)', 'Q3 (Jul-Sep)', 'Q4 (Oct-Dec)'];
+    
+    switch(timeframe) {
+      case 'today': return 'Today';
+      case 'week': {
+        const selectedWeek = week !== null ? week : getCurrentWeekNumber(now);
+        const range = getWeekRange(selectedWeek, year);
+        const startStr = range.start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        const endStr = range.end.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        return `Week ${selectedWeek} (${startStr} - ${endStr})`;
+      }
+      case 'month': {
+        const selectedMonthNum = month !== null ? month : now.getMonth();
+        return `${monthNames[selectedMonthNum]} ${year}`;
+      }
+      case 'quarter': {
+        const selectedQuarterNum = quarter !== null ? quarter : getCurrentQuarter(now);
+        return `${quarterNames[selectedQuarterNum]} ${year}`;
+      }
+      default: return 'All Time';
+    }
+  }
+
+  // Navigation functions
+  function navigateWeek(direction) {
+    const newWeek = (selectedWeek || getCurrentWeekNumber(new Date())) + direction;
+    setSelectedWeek(newWeek);
+  }
+
+  function navigateMonth(direction) {
+    const newMonth = (selectedMonth !== null ? selectedMonth : new Date().getMonth()) + direction;
+    if (newMonth < 0) {
+      setSelectedMonth(11);
+    } else if (newMonth > 11) {
+      setSelectedMonth(0);
+    } else {
+      setSelectedMonth(newMonth);
+    }
+  }
+
+  function navigateQuarter(direction) {
+    const newQuarter = (selectedQuarter !== null ? selectedQuarter : getCurrentQuarter(new Date())) + direction;
+    if (newQuarter < 0) {
+      setSelectedQuarter(3);
+    } else if (newQuarter > 3) {
+      setSelectedQuarter(0);
+    } else {
+      setSelectedQuarter(newQuarter);
+    }
+  }
 
   async function fetchTeamPerformance() {
     setLoading(true);
     try {
-      const dateRange = getDateRange(timeframe);
+      const dateRange = getDateRange(timeframe, selectedMonth, selectedQuarter, selectedWeek);
+
+      let candidatesQuery = supabase.from('candidates').select('*');
+      let assignmentsQuery = supabase.from('assignments').select('*');
+      let interviewsQuery = supabase.from('interviews').select('*');
+      let hrUsersQuery = supabase.from('hr_users').select('name, email, role, team, is_active');
+
+      if (dateRange.start && dateRange.end) {
+        candidatesQuery = candidatesQuery
+          .gte('created_at', dateRange.start)
+          .lte('created_at', dateRange.end);
+        
+        assignmentsQuery = assignmentsQuery
+          .gte('created_at', dateRange.start)
+          .lte('created_at', dateRange.end);
+        
+        interviewsQuery = interviewsQuery
+          .gte('created_at', dateRange.start)
+          .lte('created_at', dateRange.end);
+      }
 
       const [candidatesRes, assignmentsRes, interviewsRes, hrUsersRes] = await Promise.all([
-        supabase.from('candidates').select('*'),
-        supabase.from('assignments').select('*'),
-        supabase.from('interviews').select('*'),
-        supabase.from('hr_users').select('name, email, role, team, is_active')
+        candidatesQuery,
+        assignmentsQuery,
+        interviewsQuery,
+        hrUsersQuery
       ]);
 
       const candidates = candidatesRes.data || [];
@@ -60,10 +215,10 @@ function TeamPerformance() {
       // 2. Scheduling Team Performance
       const schedulingTeam = calculateSchedulingTeamPerformance(interviews, hrUsers, dateRange);
 
-      // 3. R1 Panelists - WITH WAITLIST
+      // 3. R1 Panelists
       const panelR1 = calculatePanelPerformance(interviews, 'R1', candidates, hrUsers);
 
-      // 4. R2 Panelists - WITH WAITLIST
+      // 4. R2 Panelists
       const panelR2 = calculatePanelPerformance(interviews, 'R2', candidates, hrUsers);
 
       // 5. Summary
@@ -89,33 +244,6 @@ function TeamPerformance() {
     }
   }
 
-  function getDateRange(timeframe) {
-    const now = new Date();
-    const start = new Date(now);
-    
-    switch(timeframe) {
-      case 'today':
-        start.setHours(0, 0, 0, 0);
-        break;
-      case 'week':
-        start.setDate(start.getDate() - 7);
-        break;
-      case 'month':
-        start.setMonth(start.getMonth() - 1);
-        break;
-      case 'quarter':
-        start.setMonth(start.getMonth() - 3);
-        break;
-      default:
-        start.setHours(0, 0, 0, 0);
-    }
-    
-    return {
-      start: start.toISOString(),
-      end: now.toISOString()
-    };
-  }
-
   // Helper: Get user name from email
   function getUserName(email, hrUsers) {
     if (!email) return 'Unknown';
@@ -124,7 +252,7 @@ function TeamPerformance() {
   }
 
   // ============================================================
-  // ASSIGNMENT TEAM - WITH WAITLIST LOGIC
+  // ASSIGNMENT TEAM
   // ============================================================
   function calculateAssignmentTeamPerformance(assignments, candidates, hrUsers) {
     const evaluatorMap = {};
@@ -178,20 +306,10 @@ function TeamPerformance() {
         evaluatorMap[senderName].late++;
       }
 
-      // ✅ WAITLIST LOGIC FOR ASSIGNMENT TEAM
       if (a.candidate_id) {
         const candidate = candidates.find(c => c.id === a.candidate_id);
-        if (candidate) {
-          // Check if candidate is waitlisted at Assignment stage
-          const isWaitlistedAtAssignment = 
-            candidate.current_stage === 'Waitlist' && 
-            (candidate.waitlist_restore_stage === 'Assignment' || 
-             candidate.waitlist_restore_stage === 'Applied' ||
-             candidate.waitlist_restore_stage === null);
-          
-          if (isWaitlistedAtAssignment) {
-            evaluatorMap[senderName].waitlisted++;
-          }
+        if (candidate && candidate.current_stage === 'Waitlist' && candidate.waitlist_restore_stage === 'Assignment') {
+          evaluatorMap[senderName].waitlisted++;
         }
       }
     });
@@ -240,7 +358,7 @@ function TeamPerformance() {
   }
 
   // ============================================================
-  // PANEL PERFORMANCE (R1 & R2) - WITH WAITLIST LOGIC
+  // PANEL PERFORMANCE (R1 & R2)
   // ============================================================
   function calculatePanelPerformance(interviews, round, candidates, hrUsers) {
     const panelMap = {};
@@ -296,20 +414,16 @@ function TeamPerformance() {
       });
     });
 
-    // ✅ WAITLIST LOGIC FOR R1 AND R2 PANELISTS
+    // Waitlist logic
     candidates.forEach(c => {
       if (c.current_stage === 'Waitlist') {
         const restoreStage = c.waitlist_restore_stage || '';
-        
-        // For R1: Check if waitlisted at R1 stage
         const isR1Waitlisted = restoreStage === 'Interview' || 
                               restoreStage === 'R1 Scheduling' || 
                               restoreStage === 'R1 Interview' ||
                               restoreStage === 'R1' ||
                               restoreStage === 'R1 Selected' ||
                               restoreStage === 'R1 Passed';
-        
-        // For R2: Check if waitlisted at R2 stage
         const isR2Waitlisted = restoreStage === 'R2 Scheduling' || 
                               restoreStage === 'R2 Interview' ||
                               restoreStage === 'R2' ||
@@ -320,7 +434,6 @@ function TeamPerformance() {
                                    (round === 'R2' && isR2Waitlisted);
         
         if (isRelevantWaitlist) {
-          // Find interviews for this candidate at this round
           const candidateInterviews = interviews.filter(i => 
             i.candidate_id === c.id && 
             (i.round === round || i.round === parseInt(round))
@@ -378,31 +491,122 @@ function TeamPerformance() {
     );
   }
 
+  // Get current date info for navigation display
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  const quarterNames = ['Q1 (Jan-Mar)', 'Q2 (Apr-Jun)', 'Q3 (Jul-Sep)', 'Q4 (Oct-Dec)'];
+
   return (
     <div style={{ padding: '20px 0' }}>
-      <div style={{ display: 'flex', gap: '10px', marginBottom: '24px', flexWrap: 'wrap' }}>
-        {['today', 'week', 'month', 'quarter'].map(t => (
-          <button
-            key={t}
-            onClick={() => setTimeframe(t)}
-            style={{
-              padding: '8px 20px',
-              borderRadius: '8px',
-              border: timeframe === t ? '2px solid #2563eb' : '1px solid #e2e8f0',
-              background: timeframe === t ? '#eff6ff' : '#fff',
-              color: timeframe === t ? '#1d4ed8' : '#4b5563',
-              fontSize: '14px',
-              fontWeight: '600',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
-              textTransform: 'capitalize'
-            }}
-          >
-            {t === 'quarter' ? 'Quarter' : t}
-          </button>
-        ))}
+      {/* Timeframe Filter - Matches Stage Analytics */}
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
+        marginBottom: '24px',
+        flexWrap: 'wrap',
+        gap: '12px'
+      }}>
+        <h3 style={{ margin: 0, fontSize: '16px', color: '#0f172a' }}>
+          Team Performance
+          <span style={{ 
+            fontSize: '14px', 
+            fontWeight: '400', 
+            color: '#64748b',
+            marginLeft: '12px'
+          }}>
+            ({getTimeframeLabel(timeframe, selectedMonth, selectedQuarter, selectedWeek)})
+          </span>
+        </h3>
+        
+        <div style={{ 
+          display: 'flex', 
+          gap: '6px',
+          flexWrap: 'wrap',
+          alignItems: 'center'
+        }}>
+          {/* Navigation Arrows */}
+          {(timeframe === 'week' || timeframe === 'month' || timeframe === 'quarter') && (
+            <button
+              onClick={() => {
+                if (timeframe === 'week') navigateWeek(-1);
+                else if (timeframe === 'month') navigateMonth(-1);
+                else if (timeframe === 'quarter') navigateQuarter(-1);
+              }}
+              style={{
+                padding: '6px 10px',
+                borderRadius: '6px',
+                border: '1px solid #e2e8f0',
+                background: '#fff',
+                color: '#4b5563',
+                cursor: 'pointer',
+                fontSize: '14px',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseEnter={(e) => e.target.style.background = '#f1f5f9'}
+              onMouseLeave={(e) => e.target.style.background = '#fff'}
+            >
+              ◀
+            </button>
+          )}
+          
+          {['today', 'week', 'month', 'quarter', 'all'].map(t => (
+            <button
+              key={t}
+              onClick={() => {
+                setTimeframe(t);
+                if (t === 'all') {
+                  setSelectedMonth(null);
+                  setSelectedQuarter(null);
+                  setSelectedWeek(null);
+                }
+              }}
+              style={{
+                padding: '6px 16px',
+                borderRadius: '6px',
+                border: timeframe === t ? '2px solid #2563eb' : '1px solid #e2e8f0',
+                background: timeframe === t ? '#eff6ff' : '#fff',
+                color: timeframe === t ? '#1d4ed8' : '#4b5563',
+                fontSize: '12px',
+                fontWeight: timeframe === t ? '600' : '500',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                textTransform: 'capitalize'
+              }}
+            >
+              {t === 'all' ? 'All Time' : t === 'today' ? 'Today' : t + 'ly'}
+            </button>
+          ))}
+
+          {/* Navigation Arrows (right) */}
+          {(timeframe === 'week' || timeframe === 'month' || timeframe === 'quarter') && (
+            <button
+              onClick={() => {
+                if (timeframe === 'week') navigateWeek(1);
+                else if (timeframe === 'month') navigateMonth(1);
+                else if (timeframe === 'quarter') navigateQuarter(1);
+              }}
+              style={{
+                padding: '6px 10px',
+                borderRadius: '6px',
+                border: '1px solid #e2e8f0',
+                background: '#fff',
+                color: '#4b5563',
+                cursor: 'pointer',
+                fontSize: '14px',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseEnter={(e) => e.target.style.background = '#f1f5f9'}
+              onMouseLeave={(e) => e.target.style.background = '#fff'}
+            >
+              ▶
+            </button>
+          )}
+        </div>
       </div>
 
+      {/* Summary Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '16px', marginBottom: '30px' }}>
         <div style={{ background: '#fff', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
           <div style={{ fontSize: '12px', color: '#64748b' }}>New Candidates</div>
@@ -426,6 +630,7 @@ function TeamPerformance() {
         </div>
       </div>
 
+      {/* Team Performance Grid */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
         {/* Assignment Team */}
         <div style={{ background: '#fff', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>

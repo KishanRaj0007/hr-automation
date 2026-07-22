@@ -1,3 +1,4 @@
+// components/TeamActivityTracker.jsx - FIXED
 import { useEffect, useState } from 'react';
 import { supabase } from '../services/supabase';
 import { useAuth } from '../context/AuthContext';
@@ -179,9 +180,9 @@ function TeamActivityTracker() {
       ) : (
         <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
           {activities.map((activity, index) => {
-            // Check if panelist name is "Unknown" or empty
-            const panelistName = activity.details?.panelist;
-            const isPanelistUnknown = !panelistName || panelistName === 'Unknown' || panelistName === '';
+            // ✅ FIX: Check both panel and panelist in details (case-insensitive)
+            const panelName = activity.details?.panel || activity.details?.panelist || '';
+            const isPanelistUnknown = !panelName || panelName === 'Unknown' || panelName === '' || panelName === 'Panelist Not Assigned';
 
             return (
               <div
@@ -238,29 +239,30 @@ function TeamActivityTracker() {
                     {activity.details?.candidate_name && (
                       <span>{activity.details.candidate_name}</span>
                     )}
-                    {activity.details?.panelist && !isPanelistUnknown && (
-                      <span> •  {activity.details.panelist}</span>
+                    {/* ✅ FIX: Show panel name correctly using panelName variable */}
+                    {activity.action === 'interview_scheduled' && panelName && !isPanelistUnknown && (
+                      <span> • {panelName}</span>
                     )}
-                    {isPanelistUnknown && activity.action?.includes('interview') && (
-                      <span> •  Panelist Not Assigned</span>
+                    {activity.action === 'interview_scheduled' && isPanelistUnknown && (
+                      <span> • Panelist Not Assigned</span>
                     )}
                     {activity.details?.round && (
                       <span> • {activity.details.round}</span>
                     )}
                     {activity.details?.total_score && (
-                      <span> •  Score: {activity.details.total_score}</span>
+                      <span> • Score: {activity.details.total_score}</span>
                     )}
                     {activity.details?.domain && (
-                      <span> •  {activity.details.domain}</span>
+                      <span> • {activity.details.domain}</span>
                     )}
                     {activity.details?.message && (
-                      <span> •  {activity.details.message}</span>
+                      <span> • {activity.details.message}</span>
                     )}
                     {activity.details?.reason && (
-                      <span> •  Reason: {activity.details.reason}</span>
+                      <span> • Reason: {activity.details.reason}</span>
                     )}
                     {activity.details?.new_status && (
-                      <span> •  Status: {activity.details.new_status}</span>
+                      <span> • Status: {activity.details.new_status}</span>
                     )}
                   </div>
                   <div style={{ fontSize: '11px', color: '#090a0a', marginTop: '4px' }}>

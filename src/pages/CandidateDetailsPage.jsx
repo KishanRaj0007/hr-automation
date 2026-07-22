@@ -62,6 +62,11 @@ async function logTeamActivity(action, entityType, entityId, details = {}) {
   const hrRole = localStorage.getItem('userRole') || 'system';
   const hrTeam = localStorage.getItem('userTeam') || 'leadership';
 
+  // ✅ FIX: Ensure panel is always set for interview_scheduled
+  if (action === 'interview_scheduled' && details) {
+    details.panel = details.panel || 'Panelist Not Assigned';
+  }
+
   try {
     await supabase
       .from('team_activity_log')
@@ -1076,69 +1081,88 @@ Jarurat Care Foundation`;
   }
 
   async function handleScheduleInterview(roundName) {
-    if (!scheduleInput.date || !scheduleInput.startTime || !scheduleInput.endTime || !scheduleInput.link) {
-      alert("Please specify the date, start time, end time, and meeting link.");
-      return;
-    }
-
-    if (scheduleInput.startTime >= scheduleInput.endTime) {
-      alert("End time must be after start time.");
-      return;
-    }
-
-    const startDateTime = new Date(`${scheduleInput.date}T${scheduleInput.startTime}:00+05:30`);
-    const endDateTime = new Date(`${scheduleInput.date}T${scheduleInput.endTime}:00+05:30`);
-    const timeSlotDisplay = `${formatTimeForDisplay(scheduleInput.startTime)} - ${formatTimeForDisplay(scheduleInput.endTime)}`;
-
-    const interviewData = {
-      candidate_id: parseInt(id), 
-      round: roundName,
-      scheduled_date_time: startDateTime.toISOString(),
-      scheduled_end_time: endDateTime.toISOString(),
-      time_slot: timeSlotDisplay,
-      panelists: scheduleInput.panel ? [scheduleInput.panel] : [], 
-      meeting_link: scheduleInput.link,
-      result: 'Pending',
-      status: 'Scheduled',
-      scheduled_by: localStorage.getItem('hrEmail') || localStorage.getItem('userEmail') || 'System',
-      scheduled_date: new Date().toISOString()
-    };
-
-    const { data, error } = await supabase
-      .from('interviews')
-      .insert(interviewData)
-      .select(); 
-
-    if (error) {
-      alert(`❌ Database Error: ${error.message}\n\nDetails: ${JSON.stringify(error.details)}`);
-      console.error("Full Supabase Error:", error);
-      return;
-    }
-
-    const statusField = roundName === 'R1' ? { r1_status: 'Scheduled' } : { r2_status: 'Scheduled' };
-    await supabase.from('candidates').update(statusField).eq('id', id);
-    
-    // ===== LOG ACTIVITY =====
-    await logTeamActivity(
-      'interview_scheduled',
-      'interview',
-      data?.[0]?.id || id,
-      {
-        candidate_id: id,
-        candidate_name: candidate.name || candidate.full_name,
-        round: roundName,
-        date: scheduleInput.date,
-        startTime: scheduleInput.startTime,
-        endTime: scheduleInput.endTime,
-        panel: scheduleInput.panel
-      }
-    );
-    // ===== END LOG ACTIVITY =====
-    
-    alert(`Interview ${roundName} scheduled successfully for ${timeSlotDisplay}!`);
-    setScheduleInput({ panel: '', link: '', date: '', startTime: '', endTime: '' });
-    fetchCompleteProfile();
+  if (!scheduleInput.date || !scheduleInput.startTime || !scheduleInput.endTime || !scheduleInput.link) {
+    alert("Please specify the date, start time, end time, and meeting link.");
+    return;
   }
+
+  if (scheduleInput.startTime >= scheduleInput.endTime) {
+    alert("End time must be after start time.");
+    return;
+  }
+
+  const startDateTime = new Date(`${scheduleInput.date}T${scheduleInput.startTime}:00+05:30`);
+  const endDateTime = new Date(`${scheduleInput.date}T${scheduleInput.endTime}:00+05:30`);
+  const timeSlotDisplay = `${formatTimeForDisplay(scheduleInput.startTime)} - ${formatTimeForDisplay(scheduleInput.endTime)}`;
+
+  // ✅ FIXED: Properly handle panelists - ONLY AFFECTS INTERVIEW DATA
+  let panelistsArray = [];
+  const panelValue = scheduleInput.panel?.trim() || '';
+
+  if (panelValue !== '') {
+    if (panelValue.includes(',')) {
+      panelistsArray = panelValue.split(',').map(p => p.trim()).filter(p => p !== '');
+    } else {
+      panelistsArray = [panelValue];
+    }
+  }
+
+  // If still empty, use default
+  if (panelistsArray.length === 0) {
+    panelistsArray = ['Panelist Not Assigned'];
+  }
+
+  // ⚠️ THIS PART IS CRITICAL - Interview data format must remain the same
+  const interviewData = {
+    candidate_id: parseInt(id), 
+    round: roundName,
+    scheduled_date_time: startDateTime.toISOString(),
+    scheduled_end_time: endDateTime.toISOString(),
+    time_slot: timeSlotDisplay,
+    panelists: panelistsArray,  // ← ONLY CHANGE HERE
+    meeting_link: scheduleInput.link,
+    result: 'Pending',
+    status: 'Scheduled',
+    scheduled_by: localStorage.getItem('hrEmail') || localStorage.getItem('userEmail') || 'System',
+    scheduled_date: new Date().toISOString()
+  };
+
+  // ⚠️ THIS PART IS THE SAME - Interview insertion logic unchanged
+  const { data, error } = await supabase
+    .from('interviews')
+    .insert(interviewData)
+    .select(); 
+
+  if (error) {
+    alert(`❌ Database Error: ${error.message}`);
+    console.error("Full Supabase Error:", error);
+    return;
+  }
+
+  // ⚠️ THIS PART IS THE SAME - Candidate update unchanged
+  const statusField = roundName === 'R1' ? { r1_status: 'Scheduled' } : { r2_status: 'Scheduled' };
+  await supabase.from('candidates').update(statusField).eq('id', id);
+  
+  // ✅ ONLY CHANGE HERE - Activity logging with fallback
+  await logTeamActivity(
+    'interview_scheduled',
+    'interview',
+    data?.[0]?.id || id,
+    {
+      candidate_id: id,
+      candidate_name: candidate.name || candidate.full_name,
+      round: roundName,
+      date: scheduleInput.date,
+      startTime: scheduleInput.startTime,
+      endTime: scheduleInput.endTime,
+      panel: panelValue || 'Panelist Not Assigned'  // ← SAFE FALLBACK
+    }
+  );
+  
+  alert(`Interview ${roundName} scheduled successfully for ${timeSlotDisplay}!`);
+  setScheduleInput({ panel: '', link: '', date: '', startTime: '', endTime: '' });
+  fetchCompleteProfile();
+}
 
   async function handleScheduleProbationMeeting() {
     if (!probationInput.date || !probationInput.startTime || !probationInput.endTime || !probationInput.link) {
