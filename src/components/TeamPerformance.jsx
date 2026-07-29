@@ -1,4 +1,4 @@
-// components/TeamPerformance.jsx - WITH CALENDAR-BASED TIMEFRAMES
+// components/TeamPerformance.jsx
 import { useEffect, useState } from 'react';
 import { supabase } from '../services/supabase';
 import { useAuth } from '../context/AuthContext';
@@ -69,7 +69,6 @@ function TeamPerformance() {
         break;
       }
       case 'week': {
-        // Get current week (Sunday to Saturday)
         const currentDay = now.getDay();
         const diffToSunday = currentDay;
         start = new Date(now);
@@ -133,7 +132,6 @@ function TeamPerformance() {
     }
   }
 
-  // Navigation functions
   function navigateWeek(direction) {
     const newWeek = (selectedWeek || getCurrentWeekNumber(new Date())) + direction;
     setSelectedWeek(newWeek);
@@ -209,19 +207,11 @@ function TeamPerformance() {
         i.created_at && new Date(i.created_at) >= new Date(dateRange.start) && new Date(i.created_at) <= new Date(dateRange.end)
       );
 
-      // 1. Assignment Team Performance
       const assignmentTeam = calculateAssignmentTeamPerformance(assignments, candidates, hrUsers);
-
-      // 2. Scheduling Team Performance
       const schedulingTeam = calculateSchedulingTeamPerformance(interviews, hrUsers, dateRange);
-
-      // 3. R1 Panelists
       const panelR1 = calculatePanelPerformance(interviews, 'R1', candidates, hrUsers);
-
-      // 4. R2 Panelists
       const panelR2 = calculatePanelPerformance(interviews, 'R2', candidates, hrUsers);
 
-      // 5. Summary
       const summary = {
         newCandidates: filteredCandidates.length,
         totalAssignments: filteredAssignments.length,
@@ -244,16 +234,12 @@ function TeamPerformance() {
     }
   }
 
-  // Helper: Get user name from email
   function getUserName(email, hrUsers) {
     if (!email) return 'Unknown';
     const user = hrUsers.find(u => u.email === email);
     return user?.name || email;
   }
 
-  // ============================================================
-  // ASSIGNMENT TEAM
-  // ============================================================
   function calculateAssignmentTeamPerformance(assignments, candidates, hrUsers) {
     const evaluatorMap = {};
     
@@ -321,9 +307,6 @@ function TeamPerformance() {
     })).sort((a, b) => b.evaluated - a.evaluated);
   }
 
-  // ============================================================
-  // SCHEDULING TEAM
-  // ============================================================
   function calculateSchedulingTeamPerformance(interviews, hrUsers, dateRange) {
     const schedulingMap = {};
     
@@ -357,9 +340,6 @@ function TeamPerformance() {
     return Object.values(schedulingMap).sort((a, b) => (b.r1_scheduled + b.r2_scheduled) - (a.r1_scheduled + a.r2_scheduled));
   }
 
-  // ============================================================
-  // PANEL PERFORMANCE (R1 & R2)
-  // ============================================================
   function calculatePanelPerformance(interviews, round, candidates, hrUsers) {
     const panelMap = {};
     
@@ -414,7 +394,6 @@ function TeamPerformance() {
       });
     });
 
-    // Waitlist logic
     candidates.forEach(c => {
       if (c.current_stage === 'Waitlist') {
         const restoreStage = c.waitlist_restore_stage || '';
@@ -470,63 +449,49 @@ function TeamPerformance() {
 
   if (loading) {
     return (
-      <div style={{ padding: '30px', textAlign: 'center' }}>
-        <div style={{
-          width: '40px',
-          height: '40px',
-          border: '4px solid #e2e8f0',
-          borderTop: '4px solid #2563eb',
-          borderRadius: '50%',
-          animation: 'spin 1s linear infinite',
-          margin: '0 auto 16px'
-        }} />
-        <p>Loading team performance data...</p>
-        <style>{`
-          @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-          }
-        `}</style>
+      <div style={{ padding: '40px', textAlign: 'center' }}>
+        <div style={{ width: '40px', height: '40px', border: '4px solid rgba(255,255,255,0.1)', borderTop: '4px solid var(--primary)', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 16px' }} />
+        <p style={{ color: 'var(--text-muted)' }}>Loading team performance data...</p>
       </div>
     );
   }
 
-  // Get current date info for navigation display
-  const now = new Date();
-  const currentYear = now.getFullYear();
-  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-  const quarterNames = ['Q1 (Jan-Mar)', 'Q2 (Apr-Jun)', 'Q3 (Jul-Sep)', 'Q4 (Oct-Dec)'];
+  const navBtnStyle = {
+    padding: '8px 16px',
+    borderRadius: '8px',
+    border: '1px solid var(--glass-border)',
+    background: 'rgba(255, 255, 255, 0.03)',
+    color: 'var(--text-muted)',
+    cursor: 'pointer',
+    fontSize: '13px',
+    fontWeight: '600',
+    transition: 'all 0.2s ease',
+    textTransform: 'capitalize'
+  };
+
+  const activeBtnStyle = {
+    ...navBtnStyle,
+    background: 'rgba(59, 130, 246, 0.1)',
+    border: '1px solid var(--primary)',
+    color: '#fff',
+    boxShadow: '0 0 15px rgba(59, 130, 246, 0.2)'
+  };
+
+  const tableHeaderStyle = { padding: '16px 12px', borderBottom: '1px solid var(--glass-border)', color: 'var(--text-muted)', fontWeight: '600' };
+  const tableCellStyle = { padding: '16px 12px', color: '#fff', borderBottom: '1px solid rgba(255,255,255,0.02)' };
 
   return (
-    <div style={{ padding: '20px 0' }}>
-      {/* Timeframe Filter - Matches Stage Analytics */}
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center', 
-        marginBottom: '24px',
-        flexWrap: 'wrap',
-        gap: '12px'
-      }}>
-        <h3 style={{ margin: 0, fontSize: '16px', color: '#0f172a' }}>
-          Team Performance
-          <span style={{ 
-            fontSize: '14px', 
-            fontWeight: '400', 
-            color: '#64748b',
-            marginLeft: '12px'
-          }}>
+    <div className="animate-fade-up">
+      {/* Timeframe Filter */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px', flexWrap: 'wrap', gap: '16px' }}>
+        <h2 style={{ margin: 0, color: '#fff', fontSize: '20px', fontWeight: '700' }}>
+          👥 Team Performance
+          <span style={{ fontSize: '14px', fontWeight: '400', color: 'var(--text-muted)', marginLeft: '12px' }}>
             ({getTimeframeLabel(timeframe, selectedMonth, selectedQuarter, selectedWeek)})
           </span>
-        </h3>
+        </h2>
         
-        <div style={{ 
-          display: 'flex', 
-          gap: '6px',
-          flexWrap: 'wrap',
-          alignItems: 'center'
-        }}>
-          {/* Navigation Arrows */}
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
           {(timeframe === 'week' || timeframe === 'month' || timeframe === 'quarter') && (
             <button
               onClick={() => {
@@ -534,18 +499,7 @@ function TeamPerformance() {
                 else if (timeframe === 'month') navigateMonth(-1);
                 else if (timeframe === 'quarter') navigateQuarter(-1);
               }}
-              style={{
-                padding: '6px 10px',
-                borderRadius: '6px',
-                border: '1px solid #e2e8f0',
-                background: '#fff',
-                color: '#4b5563',
-                cursor: 'pointer',
-                fontSize: '14px',
-                transition: 'all 0.2s ease'
-              }}
-              onMouseEnter={(e) => e.target.style.background = '#f1f5f9'}
-              onMouseLeave={(e) => e.target.style.background = '#fff'}
+              className="btn-glass" style={{ padding: '8px 12px' }}
             >
               ◀
             </button>
@@ -557,29 +511,17 @@ function TeamPerformance() {
               onClick={() => {
                 setTimeframe(t);
                 if (t === 'all') {
-                  setSelectedMonth(null);
-                  setSelectedQuarter(null);
-                  setSelectedWeek(null);
+                  setSelectedMonth(null); setSelectedQuarter(null); setSelectedWeek(null);
                 }
               }}
-              style={{
-                padding: '6px 16px',
-                borderRadius: '6px',
-                border: timeframe === t ? '2px solid #2563eb' : '1px solid #e2e8f0',
-                background: timeframe === t ? '#eff6ff' : '#fff',
-                color: timeframe === t ? '#1d4ed8' : '#4b5563',
-                fontSize: '12px',
-                fontWeight: timeframe === t ? '600' : '500',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                textTransform: 'capitalize'
-              }}
+              style={timeframe === t ? activeBtnStyle : navBtnStyle}
+              onMouseEnter={(e) => { if (timeframe !== t) e.target.style.background = 'rgba(255,255,255,0.08)' }}
+              onMouseLeave={(e) => { if (timeframe !== t) e.target.style.background = 'rgba(255,255,255,0.03)' }}
             >
               {t === 'all' ? 'All Time' : t === 'today' ? 'Today' : t + 'ly'}
             </button>
           ))}
 
-          {/* Navigation Arrows (right) */}
           {(timeframe === 'week' || timeframe === 'month' || timeframe === 'quarter') && (
             <button
               onClick={() => {
@@ -587,18 +529,7 @@ function TeamPerformance() {
                 else if (timeframe === 'month') navigateMonth(1);
                 else if (timeframe === 'quarter') navigateQuarter(1);
               }}
-              style={{
-                padding: '6px 10px',
-                borderRadius: '6px',
-                border: '1px solid #e2e8f0',
-                background: '#fff',
-                color: '#4b5563',
-                cursor: 'pointer',
-                fontSize: '14px',
-                transition: 'all 0.2s ease'
-              }}
-              onMouseEnter={(e) => e.target.style.background = '#f1f5f9'}
-              onMouseLeave={(e) => e.target.style.background = '#fff'}
+              className="btn-glass" style={{ padding: '8px 12px' }}
             >
               ▶
             </button>
@@ -607,73 +538,56 @@ function TeamPerformance() {
       </div>
 
       {/* Summary Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '16px', marginBottom: '30px' }}>
-        <div style={{ background: '#fff', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
-          <div style={{ fontSize: '12px', color: '#64748b' }}>New Candidates</div>
-          <div style={{ fontSize: '28px', fontWeight: '800', color: '#0f172a' }}>{teamData.summary.newCandidates}</div>
-        </div>
-        <div style={{ background: '#fff', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
-          <div style={{ fontSize: '12px', color: '#64748b' }}>Assignments</div>
-          <div style={{ fontSize: '28px', fontWeight: '800', color: '#f59e0b' }}>{teamData.summary.totalAssignments}</div>
-        </div>
-        <div style={{ background: '#fff', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
-          <div style={{ fontSize: '12px', color: '#64748b' }}>Interviews</div>
-          <div style={{ fontSize: '28px', fontWeight: '800', color: '#a855f7' }}>{teamData.summary.totalInterviews}</div>
-        </div>
-        <div style={{ background: '#fff', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
-          <div style={{ fontSize: '12px', color: '#64748b' }}>Selected</div>
-          <div style={{ fontSize: '28px', fontWeight: '800', color: '#10b981' }}>{teamData.summary.totalSelected}</div>
-        </div>
-        <div style={{ background: '#fff', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
-          <div style={{ fontSize: '12px', color: '#64748b' }}>Rejected</div>
-          <div style={{ fontSize: '28px', fontWeight: '800', color: '#ef4444' }}>{teamData.summary.totalRejected}</div>
-        </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '16px', marginBottom: '32px' }}>
+        {[
+          { label: 'New Candidates', value: teamData.summary.newCandidates, color: '#fff' },
+          { label: 'Assignments', value: teamData.summary.totalAssignments, color: '#fbbf24' },
+          { label: 'Interviews', value: teamData.summary.totalInterviews, color: '#c084fc' },
+          { label: 'Selected', value: teamData.summary.totalSelected, color: '#34d399' },
+          { label: 'Rejected', value: teamData.summary.totalRejected, color: '#f87171' }
+        ].map(card => (
+          <div key={card.label} className="glass-panel" style={{ padding: '24px', textAlign: 'center' }}>
+            <div style={{ fontSize: '13px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '12px' }}>{card.label}</div>
+            <div style={{ fontSize: '36px', fontWeight: '800', color: card.color }}>{card.value}</div>
+          </div>
+        ))}
       </div>
 
       {/* Team Performance Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(500px, 1fr))', gap: '24px' }}>
+        
         {/* Assignment Team */}
-        <div style={{ background: '#fff', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-          <h4 style={{ margin: '0 0 16px 0', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div className="glass-panel" style={{ padding: '30px' }}>
+          <h4 style={{ margin: '0 0 24px 0', color: '#fff', fontSize: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span>📋</span> Assignment Team
-            <span style={{ fontSize: '12px', fontWeight: '400', color: '#94a3b8', marginLeft: 'auto' }}>
+            <span style={{ fontSize: '13px', fontWeight: '500', color: 'var(--text-muted)', marginLeft: 'auto', background: 'rgba(255,255,255,0.05)', padding: '4px 12px', borderRadius: '20px' }}>
               {teamData.assignmentTeam.reduce((sum, t) => sum + t.evaluated, 0)} evaluations
             </span>
           </h4>
           {teamData.assignmentTeam.length === 0 ? (
-            <p style={{ color: '#94a3b8', textAlign: 'center', padding: '20px 0' }}>No assignment data found.</p>
+            <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '20px 0' }}>No assignment data found.</p>
           ) : (
             <div style={{ maxHeight: '350px', overflowY: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px', textAlign: 'left' }}>
                 <thead>
-                  <tr style={{ borderBottom: '2px solid #f1f5f9' }}>
-                    <th style={{ padding: '8px', textAlign: 'left' }}>Evaluator</th>
-                    <th style={{ padding: '8px', textAlign: 'center' }}>Sent</th>
-                    <th style={{ padding: '8px', textAlign: 'center' }}>Evaluated</th>
-                    <th style={{ padding: '8px', textAlign: 'center' }}>Pass Rate</th>
-                    <th style={{ padding: '8px', textAlign: 'center' }}>Late</th>
-                    <th style={{ padding: '8px', textAlign: 'center' }}>Rejected</th>
-                    <th style={{ padding: '8px', textAlign: 'center' }}>Waitlisted</th>
+                  <tr>
+                    <th style={tableHeaderStyle}>Evaluator</th>
+                    <th style={{...tableHeaderStyle, textAlign: 'center'}}>Sent</th>
+                    <th style={{...tableHeaderStyle, textAlign: 'center'}}>Evaluated</th>
+                    <th style={{...tableHeaderStyle, textAlign: 'center'}}>Pass %</th>
+                    <th style={{...tableHeaderStyle, textAlign: 'center'}}>Late</th>
+                    <th style={{...tableHeaderStyle, textAlign: 'center'}}>Rejected</th>
                   </tr>
                 </thead>
                 <tbody>
                   {teamData.assignmentTeam.map((item, index) => (
-                    <tr key={index} style={{ borderBottom: '1px solid #f8fafc' }}>
-                      <td style={{ padding: '8px', fontWeight: '500' }}>{item.evaluator_name}</td>
-                      <td style={{ padding: '8px', textAlign: 'center' }}>{item.sent || 0}</td>
-                      <td style={{ padding: '8px', textAlign: 'center' }}>{item.evaluated}</td>
-                      <td style={{ padding: '8px', textAlign: 'center', fontWeight: '600', color: item.pass_rate >= 50 ? '#10b981' : '#ef4444' }}>
-                        {item.pass_rate}%
-                      </td>
-                      <td style={{ padding: '8px', textAlign: 'center', color: item.late > 0 ? '#ef4444' : '#94a3b8' }}>
-                        {item.late}
-                      </td>
-                      <td style={{ padding: '8px', textAlign: 'center', color: item.rejected > 0 ? '#ef4444' : '#94a3b8' }}>
-                        {item.rejected}
-                      </td>
-                      <td style={{ padding: '8px', textAlign: 'center', color: item.waitlisted > 0 ? '#8b5cf6' : '#94a3b8' }}>
-                        {item.waitlisted}
-                      </td>
+                    <tr key={index}>
+                      <td style={{...tableCellStyle, fontWeight: '600'}}>{item.evaluator_name}</td>
+                      <td style={{...tableCellStyle, textAlign: 'center'}}>{item.sent || 0}</td>
+                      <td style={{...tableCellStyle, textAlign: 'center'}}>{item.evaluated}</td>
+                      <td style={{...tableCellStyle, textAlign: 'center', fontWeight: '700', color: item.pass_rate >= 50 ? '#34d399' : '#f87171'}}>{item.pass_rate}%</td>
+                      <td style={{...tableCellStyle, textAlign: 'center', color: item.late > 0 ? '#f87171' : 'var(--text-muted)'}}>{item.late}</td>
+                      <td style={{...tableCellStyle, textAlign: 'center', color: item.rejected > 0 ? '#f87171' : 'var(--text-muted)'}}>{item.rejected}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -683,35 +597,33 @@ function TeamPerformance() {
         </div>
 
         {/* Scheduling Team */}
-        <div style={{ background: '#fff', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-          <h4 style={{ margin: '0 0 16px 0', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div className="glass-panel" style={{ padding: '30px' }}>
+          <h4 style={{ margin: '0 0 24px 0', color: '#fff', fontSize: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span>📅</span> Scheduling Team
-            <span style={{ fontSize: '12px', fontWeight: '400', color: '#94a3b8', marginLeft: 'auto' }}>
-              {teamData.schedulingTeam.reduce((sum, t) => sum + t.r1_scheduled + t.r2_scheduled, 0)} total scheduled
+            <span style={{ fontSize: '13px', fontWeight: '500', color: 'var(--text-muted)', marginLeft: 'auto', background: 'rgba(255,255,255,0.05)', padding: '4px 12px', borderRadius: '20px' }}>
+              {teamData.schedulingTeam.reduce((sum, t) => sum + t.r1_scheduled + t.r2_scheduled, 0)} scheduled
             </span>
           </h4>
           {teamData.schedulingTeam.length === 0 || teamData.schedulingTeam.every(m => m.r1_scheduled === 0 && m.r2_scheduled === 0) ? (
-            <p style={{ color: '#94a3b8', textAlign: 'center', padding: '20px 0' }}>No scheduling activity found.</p>
+            <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '20px 0' }}>No scheduling activity found.</p>
           ) : (
             <div style={{ maxHeight: '350px', overflowY: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px', textAlign: 'left' }}>
                 <thead>
-                  <tr style={{ borderBottom: '2px solid #f1f5f9' }}>
-                    <th style={{ padding: '8px', textAlign: 'left' }}>Name</th>
-                    <th style={{ padding: '8px', textAlign: 'center' }}>R1 Scheduled</th>
-                    <th style={{ padding: '8px', textAlign: 'center' }}>R2 Scheduled</th>
-                    <th style={{ padding: '8px', textAlign: 'center' }}>Rescheduled</th>
+                  <tr>
+                    <th style={tableHeaderStyle}>Name</th>
+                    <th style={{...tableHeaderStyle, textAlign: 'center'}}>R1</th>
+                    <th style={{...tableHeaderStyle, textAlign: 'center'}}>R2</th>
+                    <th style={{...tableHeaderStyle, textAlign: 'center'}}>Rescheduled</th>
                   </tr>
                 </thead>
                 <tbody>
                   {teamData.schedulingTeam.map((item, index) => (
-                    <tr key={index} style={{ borderBottom: '1px solid #f8fafc' }}>
-                      <td style={{ padding: '8px', fontWeight: '500' }}>{item.name}</td>
-                      <td style={{ padding: '8px', textAlign: 'center' }}>{item.r1_scheduled}</td>
-                      <td style={{ padding: '8px', textAlign: 'center' }}>{item.r2_scheduled}</td>
-                      <td style={{ padding: '8px', textAlign: 'center', color: item.rescheduled > 0 ? '#f59e0b' : '#94a3b8' }}>
-                        {item.rescheduled}
-                      </td>
+                    <tr key={index}>
+                      <td style={{...tableCellStyle, fontWeight: '600'}}>{item.name}</td>
+                      <td style={{...tableCellStyle, textAlign: 'center'}}>{item.r1_scheduled}</td>
+                      <td style={{...tableCellStyle, textAlign: 'center'}}>{item.r2_scheduled}</td>
+                      <td style={{...tableCellStyle, textAlign: 'center', color: item.rescheduled > 0 ? '#fbbf24' : 'var(--text-muted)'}}>{item.rescheduled}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -721,45 +633,35 @@ function TeamPerformance() {
         </div>
 
         {/* R1 Panelists */}
-        <div style={{ background: '#fff', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-          <h4 style={{ margin: '0 0 16px 0', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div className="glass-panel" style={{ padding: '30px' }}>
+          <h4 style={{ margin: '0 0 24px 0', color: '#fff', fontSize: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span>🎯</span> R1 Panelists
-            <span style={{ fontSize: '12px', fontWeight: '400', color: '#94a3b8', marginLeft: 'auto' }}>
+            <span style={{ fontSize: '13px', fontWeight: '500', color: 'var(--text-muted)', marginLeft: 'auto', background: 'rgba(255,255,255,0.05)', padding: '4px 12px', borderRadius: '20px' }}>
               {teamData.panelR1.reduce((sum, p) => sum + p.evaluated, 0)} evaluations
             </span>
           </h4>
           {teamData.panelR1.length === 0 ? (
-            <p style={{ color: '#94a3b8', textAlign: 'center', padding: '20px 0' }}>No R1 interview data found.</p>
+            <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '20px 0' }}>No R1 interview data found.</p>
           ) : (
             <div style={{ maxHeight: '350px', overflowY: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px', textAlign: 'left' }}>
                 <thead>
-                  <tr style={{ borderBottom: '2px solid #f1f5f9' }}>
-                    <th style={{ padding: '6px', textAlign: 'left' }}>Panelist</th>
-                    <th style={{ padding: '6px', textAlign: 'center' }}>Evaluated</th>
-                    <th style={{ padding: '6px', textAlign: 'center' }}>Pass %</th>
-                    <th style={{ padding: '6px', textAlign: 'center' }}>Fail %</th>
-                    <th style={{ padding: '6px', textAlign: 'center' }}>On Hold</th>
-                    <th style={{ padding: '6px', textAlign: 'center' }}>Waitlisted</th>
+                  <tr>
+                    <th style={tableHeaderStyle}>Panelist</th>
+                    <th style={{...tableHeaderStyle, textAlign: 'center'}}>Eval.</th>
+                    <th style={{...tableHeaderStyle, textAlign: 'center'}}>Pass %</th>
+                    <th style={{...tableHeaderStyle, textAlign: 'center'}}>Fail %</th>
+                    <th style={{...tableHeaderStyle, textAlign: 'center'}}>Hold</th>
                   </tr>
                 </thead>
                 <tbody>
                   {teamData.panelR1.map((item, index) => (
-                    <tr key={index} style={{ borderBottom: '1px solid #f8fafc' }}>
-                      <td style={{ padding: '6px', fontWeight: '500' }}>{item.panelist_name}</td>
-                      <td style={{ padding: '6px', textAlign: 'center' }}>{item.evaluated}</td>
-                      <td style={{ padding: '6px', textAlign: 'center', fontWeight: '600', color: item.pass_rate >= 50 ? '#10b981' : '#ef4444' }}>
-                        {item.pass_rate}%
-                      </td>
-                      <td style={{ padding: '6px', textAlign: 'center', fontWeight: '600', color: item.fail_rate > 50 ? '#ef4444' : '#94a3b8' }}>
-                        {item.fail_rate}%
-                      </td>
-                      <td style={{ padding: '6px', textAlign: 'center', color: item.on_hold > 0 ? '#f59e0b' : '#94a3b8' }}>
-                        {item.on_hold}
-                      </td>
-                      <td style={{ padding: '6px', textAlign: 'center', color: item.waitlisted > 0 ? '#8b5cf6' : '#94a3b8' }}>
-                        {item.waitlisted}
-                      </td>
+                    <tr key={index}>
+                      <td style={{...tableCellStyle, fontWeight: '600'}}>{item.panelist_name}</td>
+                      <td style={{...tableCellStyle, textAlign: 'center'}}>{item.evaluated}</td>
+                      <td style={{...tableCellStyle, textAlign: 'center', fontWeight: '700', color: item.pass_rate >= 50 ? '#34d399' : '#f87171'}}>{item.pass_rate}%</td>
+                      <td style={{...tableCellStyle, textAlign: 'center', fontWeight: '700', color: item.fail_rate > 50 ? '#f87171' : 'var(--text-muted)'}}>{item.fail_rate}%</td>
+                      <td style={{...tableCellStyle, textAlign: 'center', color: item.on_hold > 0 ? '#fbbf24' : 'var(--text-muted)'}}>{item.on_hold}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -769,45 +671,35 @@ function TeamPerformance() {
         </div>
 
         {/* R2 Panelists */}
-        <div style={{ background: '#fff', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-          <h4 style={{ margin: '0 0 16px 0', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div className="glass-panel" style={{ padding: '30px' }}>
+          <h4 style={{ margin: '0 0 24px 0', color: '#fff', fontSize: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span>🏆</span> R2 Panelists
-            <span style={{ fontSize: '12px', fontWeight: '400', color: '#94a3b8', marginLeft: 'auto' }}>
+            <span style={{ fontSize: '13px', fontWeight: '500', color: 'var(--text-muted)', marginLeft: 'auto', background: 'rgba(255,255,255,0.05)', padding: '4px 12px', borderRadius: '20px' }}>
               {teamData.panelR2.reduce((sum, p) => sum + p.evaluated, 0)} evaluations
             </span>
           </h4>
           {teamData.panelR2.length === 0 ? (
-            <p style={{ color: '#94a3b8', textAlign: 'center', padding: '20px 0' }}>No R2 interview data found.</p>
+            <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '20px 0' }}>No R2 interview data found.</p>
           ) : (
             <div style={{ maxHeight: '350px', overflowY: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px', textAlign: 'left' }}>
                 <thead>
-                  <tr style={{ borderBottom: '2px solid #f1f5f9' }}>
-                    <th style={{ padding: '6px', textAlign: 'left' }}>Panelist</th>
-                    <th style={{ padding: '6px', textAlign: 'center' }}>Evaluated</th>
-                    <th style={{ padding: '6px', textAlign: 'center' }}>Pass %</th>
-                    <th style={{ padding: '6px', textAlign: 'center' }}>Fail %</th>
-                    <th style={{ padding: '6px', textAlign: 'center' }}>On Hold</th>
-                    <th style={{ padding: '6px', textAlign: 'center' }}>Waitlisted</th>
+                  <tr>
+                    <th style={tableHeaderStyle}>Panelist</th>
+                    <th style={{...tableHeaderStyle, textAlign: 'center'}}>Eval.</th>
+                    <th style={{...tableHeaderStyle, textAlign: 'center'}}>Pass %</th>
+                    <th style={{...tableHeaderStyle, textAlign: 'center'}}>Fail %</th>
+                    <th style={{...tableHeaderStyle, textAlign: 'center'}}>Hold</th>
                   </tr>
                 </thead>
                 <tbody>
                   {teamData.panelR2.map((item, index) => (
-                    <tr key={index} style={{ borderBottom: '1px solid #f8fafc' }}>
-                      <td style={{ padding: '6px', fontWeight: '500' }}>{item.panelist_name}</td>
-                      <td style={{ padding: '6px', textAlign: 'center' }}>{item.evaluated}</td>
-                      <td style={{ padding: '6px', textAlign: 'center', fontWeight: '600', color: item.pass_rate >= 50 ? '#10b981' : '#ef4444' }}>
-                        {item.pass_rate}%
-                      </td>
-                      <td style={{ padding: '6px', textAlign: 'center', fontWeight: '600', color: item.fail_rate > 50 ? '#ef4444' : '#94a3b8' }}>
-                        {item.fail_rate}%
-                      </td>
-                      <td style={{ padding: '6px', textAlign: 'center', color: item.on_hold > 0 ? '#f59e0b' : '#94a3b8' }}>
-                        {item.on_hold}
-                      </td>
-                      <td style={{ padding: '6px', textAlign: 'center', color: item.waitlisted > 0 ? '#8b5cf6' : '#94a3b8' }}>
-                        {item.waitlisted}
-                      </td>
+                    <tr key={index}>
+                      <td style={{...tableCellStyle, fontWeight: '600'}}>{item.panelist_name}</td>
+                      <td style={{...tableCellStyle, textAlign: 'center'}}>{item.evaluated}</td>
+                      <td style={{...tableCellStyle, textAlign: 'center', fontWeight: '700', color: item.pass_rate >= 50 ? '#34d399' : '#f87171'}}>{item.pass_rate}%</td>
+                      <td style={{...tableCellStyle, textAlign: 'center', fontWeight: '700', color: item.fail_rate > 50 ? '#f87171' : 'var(--text-muted)'}}>{item.fail_rate}%</td>
+                      <td style={{...tableCellStyle, textAlign: 'center', color: item.on_hold > 0 ? '#fbbf24' : 'var(--text-muted)'}}>{item.on_hold}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -815,6 +707,7 @@ function TeamPerformance() {
             </div>
           )}
         </div>
+
       </div>
     </div>
   );

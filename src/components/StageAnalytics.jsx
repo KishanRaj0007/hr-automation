@@ -1,4 +1,4 @@
-// components/StageAnalytics.jsx - WITH CALENDAR-BASED TIMEFRAMES
+// components/StageAnalytics.jsx
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../services/supabase';
 import { calculateStageAnalytics } from '../utils/analyticsHelpers';
@@ -52,9 +52,8 @@ const StageAnalytics = () => {
         break;
       }
       case 'week': {
-        // Get current week (Sunday to Saturday)
         const currentDay = now.getDay();
-        const diffToSunday = currentDay; // Sunday is 0
+        const diffToSunday = currentDay;
         start = new Date(now);
         start.setDate(now.getDate() - diffToSunday);
         start.setHours(0, 0, 0, 0);
@@ -64,7 +63,6 @@ const StageAnalytics = () => {
         break;
       }
       case 'month': {
-        // Get current month (1st to last day)
         const selectedMonthNum = month !== null ? month : now.getMonth();
         start = new Date(year, selectedMonthNum, 1);
         end = new Date(year, selectedMonthNum + 1, 0);
@@ -72,7 +70,6 @@ const StageAnalytics = () => {
         break;
       }
       case 'quarter': {
-        // Get current quarter
         const selectedQuarterNum = quarter !== null ? quarter : getCurrentQuarter(now);
         const quarterStartMonth = selectedQuarterNum * 3;
         start = new Date(year, quarterStartMonth, 1);
@@ -120,7 +117,6 @@ const StageAnalytics = () => {
     }
   }
 
-  // Navigation functions
   function navigateWeek(direction) {
     const newWeek = (selectedWeek || getCurrentWeekNumber(new Date())) + direction;
     setSelectedWeek(newWeek);
@@ -206,66 +202,49 @@ const StageAnalytics = () => {
   if (loading) {
     return (
       <div style={{ textAlign: 'center', padding: '40px' }}>
-        <div style={{
-          width: '40px',
-          height: '40px',
-          border: '4px solid #e2e8f0',
-          borderTop: '4px solid #2563eb',
-          borderRadius: '50%',
-          animation: 'spin 1s linear infinite',
-          margin: '0 auto 16px'
-        }} />
-        <p>Loading analytics...</p>
-        <style>{`
-          @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-          }
-        `}</style>
+        <div style={{ width: '40px', height: '40px', border: '4px solid rgba(255,255,255,0.1)', borderTop: '4px solid var(--primary)', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 16px' }} />
+        <p style={{ color: 'var(--text-muted)' }}>Loading analytics...</p>
       </div>
     );
   }
 
   if (!data) {
-    return <div style={{ padding: '40px', textAlign: 'center', color: '#94a3b8' }}>No data available</div>;
+    return <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>No data available</div>;
   }
 
-  // Get current date info for navigation display
-  const now = new Date();
-  const currentYear = now.getFullYear();
-  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-  const quarterNames = ['Q1 (Jan-Mar)', 'Q2 (Apr-Jun)', 'Q3 (Jul-Sep)', 'Q4 (Oct-Dec)'];
+  // Common button style for dark mode
+  const navBtnStyle = {
+    padding: '8px 16px',
+    borderRadius: '8px',
+    border: '1px solid var(--glass-border)',
+    background: 'rgba(255, 255, 255, 0.03)',
+    color: 'var(--text-muted)',
+    cursor: 'pointer',
+    fontSize: '13px',
+    fontWeight: '600',
+    transition: 'all 0.2s ease',
+    textTransform: 'capitalize'
+  };
+
+  const activeBtnStyle = {
+    ...navBtnStyle,
+    background: 'rgba(59, 130, 246, 0.1)',
+    border: '1px solid var(--primary)',
+    color: '#fff',
+    boxShadow: '0 0 15px rgba(59, 130, 246, 0.2)'
+  };
 
   return (
-    <div style={{ padding: '20px 0' }}>
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center', 
-        marginBottom: '24px',
-        flexWrap: 'wrap',
-        gap: '12px'
-      }}>
-        <h2 style={{ margin: 0, color: '#0f172a', fontSize: '24px', fontWeight: '700' }}>
-          📊 Stage Analytics Dashboard
-          <span style={{ 
-            fontSize: '14px', 
-            fontWeight: '400', 
-            color: '#64748b',
-            marginLeft: '12px'
-          }}>
+    <div className="animate-fade-up">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px', flexWrap: 'wrap', gap: '16px' }}>
+        <h2 style={{ margin: 0, color: '#fff', fontSize: '20px', fontWeight: '700' }}>
+          📊 Stage Analytics
+          <span style={{ fontSize: '14px', fontWeight: '400', color: 'var(--text-muted)', marginLeft: '12px' }}>
             ({data.timeframe?.label || 'All Time'})
           </span>
         </h2>
         
-        {/* Timeframe Filter Buttons */}
-        <div style={{ 
-          display: 'flex', 
-          gap: '6px',
-          flexWrap: 'wrap',
-          alignItems: 'center'
-        }}>
-          {/* Navigation Arrows (for week/month/quarter) */}
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
           {(timeframe === 'week' || timeframe === 'month' || timeframe === 'quarter') && (
             <button
               onClick={() => {
@@ -273,109 +252,25 @@ const StageAnalytics = () => {
                 else if (timeframe === 'month') navigateMonth(-1);
                 else if (timeframe === 'quarter') navigateQuarter(-1);
               }}
-              style={{
-                padding: '6px 10px',
-                borderRadius: '6px',
-                border: '1px solid #e2e8f0',
-                background: '#fff',
-                color: '#4b5563',
-                cursor: 'pointer',
-                fontSize: '14px',
-                transition: 'all 0.2s ease'
-              }}
-              onMouseEnter={(e) => e.target.style.background = '#f1f5f9'}
-              onMouseLeave={(e) => e.target.style.background = '#fff'}
+              className="btn-glass"
+              style={{ padding: '8px 12px' }}
             >
               ◀
             </button>
           )}
           
-          <button
-            onClick={() => setTimeframe('today')}
-            style={{
-              padding: '6px 16px',
-              borderRadius: '6px',
-              border: timeframe === 'today' ? '2px solid #2563eb' : '1px solid #e2e8f0',
-              background: timeframe === 'today' ? '#eff6ff' : '#fff',
-              color: timeframe === 'today' ? '#1d4ed8' : '#4b5563',
-              fontSize: '12px',
-              fontWeight: timeframe === 'today' ? '600' : '500',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease'
-            }}
-          >
-            Today
-          </button>
-          
-          <button
-            onClick={() => setTimeframe('week')}
-            style={{
-              padding: '6px 16px',
-              borderRadius: '6px',
-              border: timeframe === 'week' ? '2px solid #2563eb' : '1px solid #e2e8f0',
-              background: timeframe === 'week' ? '#eff6ff' : '#fff',
-              color: timeframe === 'week' ? '#1d4ed8' : '#4b5563',
-              fontSize: '12px',
-              fontWeight: timeframe === 'week' ? '600' : '500',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease'
-            }}
-          >
-            Week
-          </button>
-          
-          <button
-            onClick={() => setTimeframe('month')}
-            style={{
-              padding: '6px 16px',
-              borderRadius: '6px',
-              border: timeframe === 'month' ? '2px solid #2563eb' : '1px solid #e2e8f0',
-              background: timeframe === 'month' ? '#eff6ff' : '#fff',
-              color: timeframe === 'month' ? '#1d4ed8' : '#4b5563',
-              fontSize: '12px',
-              fontWeight: timeframe === 'month' ? '600' : '500',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease'
-            }}
-          >
-            Month
-          </button>
-          
-          <button
-            onClick={() => setTimeframe('quarter')}
-            style={{
-              padding: '6px 16px',
-              borderRadius: '6px',
-              border: timeframe === 'quarter' ? '2px solid #2563eb' : '1px solid #e2e8f0',
-              background: timeframe === 'quarter' ? '#eff6ff' : '#fff',
-              color: timeframe === 'quarter' ? '#1d4ed8' : '#4b5563',
-              fontSize: '12px',
-              fontWeight: timeframe === 'quarter' ? '600' : '500',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease'
-            }}
-          >
-            Quarter
-          </button>
-          
-          <button
-            onClick={() => setTimeframe('all')}
-            style={{
-              padding: '6px 16px',
-              borderRadius: '6px',
-              border: timeframe === 'all' ? '2px solid #2563eb' : '1px solid #e2e8f0',
-              background: timeframe === 'all' ? '#eff6ff' : '#fff',
-              color: timeframe === 'all' ? '#1d4ed8' : '#4b5563',
-              fontSize: '12px',
-              fontWeight: timeframe === 'all' ? '600' : '500',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease'
-            }}
-          >
-            All Time
-          </button>
+          {['today', 'week', 'month', 'quarter', 'all'].map(t => (
+            <button
+              key={t}
+              onClick={() => setTimeframe(t)}
+              style={timeframe === t ? activeBtnStyle : navBtnStyle}
+              onMouseEnter={(e) => { if (timeframe !== t) e.target.style.background = 'rgba(255,255,255,0.08)' }}
+              onMouseLeave={(e) => { if (timeframe !== t) e.target.style.background = 'rgba(255,255,255,0.03)' }}
+            >
+              {t === 'all' ? 'All Time' : t === 'today' ? 'Today' : t + 'ly'}
+            </button>
+          ))}
 
-          {/* Navigation Arrows (right) */}
           {(timeframe === 'week' || timeframe === 'month' || timeframe === 'quarter') && (
             <button
               onClick={() => {
@@ -383,18 +278,8 @@ const StageAnalytics = () => {
                 else if (timeframe === 'month') navigateMonth(1);
                 else if (timeframe === 'quarter') navigateQuarter(1);
               }}
-              style={{
-                padding: '6px 10px',
-                borderRadius: '6px',
-                border: '1px solid #e2e8f0',
-                background: '#fff',
-                color: '#4b5563',
-                cursor: 'pointer',
-                fontSize: '14px',
-                transition: 'all 0.2s ease'
-              }}
-              onMouseEnter={(e) => e.target.style.background = '#f1f5f9'}
-              onMouseLeave={(e) => e.target.style.background = '#fff'}
+              className="btn-glass"
+              style={{ padding: '8px 12px' }}
             >
               ▶
             </button>
@@ -402,336 +287,166 @@ const StageAnalytics = () => {
         </div>
       </div>
 
-      {/* Stage 1: Assignments */}
-      <StageCard title="📝 STAGE 1: ASSIGNMENTS">
-        <MetricRow 
-          label="Submission Rate" 
-          value={data.assignment.submissionRate} 
-          suffix="%" 
-          status={data.assignment.status.submissionRate}
-          tooltip="Submitted / Assignment Sent × 100"
-          thresholds={{ good: '60%+', watch: '50-60%', flag: 'below 40%' }}
-        />
-        <MetricRow 
-          label="Evaluation TAT" 
-          value={data.assignment.evaluationTAT} 
-          suffix=" days" 
-          status={data.assignment.status.evaluationTAT}
-          tooltip="Evaluation Date - Submission Date"
-          thresholds={{ good: '1 day', watch: '2 days', flag: '3+ days' }}
-        />
-        <MetricRow 
-          label="Assignment Pass Rate" 
-          value={data.assignment.passRate} 
-          suffix="%" 
-          status={data.assignment.status.passRate}
-          tooltip="Passed ÷ Evaluated × 100"
-          thresholds={{ good: '50-70%', watch: '35-50%', flag: 'below 35%', too_easy: '85%+' }}
-        />
-        <div style={{ marginTop: '12px', padding: '12px 16px', background: '#f8fafc', borderRadius: '6px' }}>
-          <span style={{ fontSize: '13px', color: '#64748b' }}>
-            📊 Sent: {data.assignment.sent} | Submitted: {data.assignment.submitted} | 
-            Evaluated: {data.assignment.evaluated} | Passed: {data.assignment.passed} | 
-            Late: {data.assignment.lateSubmissions}
-          </span>
-        </div>
-      </StageCard>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '24px' }}>
+        <StageCard title="📝 STAGE 1: ASSIGNMENTS">
+          <MetricRow label="Submission Rate" value={data.assignment.submissionRate} suffix="%" status={data.assignment.status.submissionRate} tooltip="Submitted / Assignment Sent × 100" thresholds={{ good: '60%+', watch: '50-60%', flag: 'below 40%' }} />
+          <MetricRow label="Evaluation TAT" value={data.assignment.evaluationTAT} suffix=" days" status={data.assignment.status.evaluationTAT} tooltip="Evaluation Date - Submission Date" thresholds={{ good: '1 day', watch: '2 days', flag: '3+ days' }} />
+          <MetricRow label="Assignment Pass Rate" value={data.assignment.passRate} suffix="%" status={data.assignment.status.passRate} tooltip="Passed ÷ Evaluated × 100" thresholds={{ good: '50-70%', watch: '35-50%', flag: 'below 35%', too_easy: '85%+' }} />
+          <div style={{ marginTop: '16px', padding: '12px 16px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', border: '1px solid var(--glass-border)' }}>
+            <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>📊 Sent: {data.assignment.sent} | Submitted: {data.assignment.submitted} | Evaluated: {data.assignment.evaluated} | Passed: {data.assignment.passed} | Late: {data.assignment.lateSubmissions}</span>
+          </div>
+        </StageCard>
 
-      {/* Stage 2: R1 Scheduling */}
-      <StageCard title="📅 STAGE 2: R1 SCHEDULING">
-        <MetricRow 
-          label="R1 TAT" 
-          value={data.r1Scheduling.r1TAT} 
-          suffix=" days" 
-          status={data.r1Scheduling.status.r1TAT}
-          tooltip="R1 Scheduled Date - Assignment Pass Date"
-          thresholds={{ good: '1-2 days', watch: '3 days', flag: '4+ days' }}
-        />
-        <div style={{ marginTop: '12px', padding: '12px 16px', background: '#f8fafc', borderRadius: '6px' }}>
-          <span style={{ fontSize: '13px', color: '#64748b' }}>
-            📊 Total R1 Interviews: {data.r1Scheduling.total}
-          </span>
-        </div>
-      </StageCard>
+        <StageCard title="📅 STAGE 2: R1 SCHEDULING">
+          <MetricRow label="R1 TAT" value={data.r1Scheduling.r1TAT} suffix=" days" status={data.r1Scheduling.status.r1TAT} tooltip="R1 Scheduled Date - Assignment Pass Date" thresholds={{ good: '1-2 days', watch: '3 days', flag: '4+ days' }} />
+          <div style={{ marginTop: '16px', padding: '12px 16px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', border: '1px solid var(--glass-border)' }}>
+            <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>📊 Total R1 Interviews: {data.r1Scheduling.total}</span>
+          </div>
+        </StageCard>
 
-      {/* Stage 3: R1 Interviews */}
-      <StageCard title="🎯 STAGE 3: R1 INTERVIEWS">
-        <MetricRow 
-          label="Conducted Rate" 
-          value={data.r1Interview.conductedRate} 
-          suffix="%" 
-          status={data.r1Interview.status.conductedRate}
-          tooltip="Conducted / Scheduled × 100"
-          thresholds={{ good: '50%+', watch: '45-50%', flag: 'below 45%' }}
-        />
-        <MetricRow 
-          label="Moving Forward Rate" 
-          value={data.r1Interview.movingForwardRate} 
-          suffix="%" 
-          status={data.r1Interview.status.movingForwardRate}
-          tooltip="R1 Passed / Conducted × 100"
-          thresholds={{ good: '50%+', watch: '30-50%', flag: 'below 30%' }}
-        />
-        <MetricRow 
-          label="Reschedule Rate" 
-          value={data.r1Interview.rescheduleRate} 
-          suffix="%" 
-          status={data.r1Interview.status.rescheduleRate}
-          tooltip="Total Reschedules / Total Scheduled × 100"
-          thresholds={{ good: 'under 15%', watch: '15-25%', flag: '25%+' }}
-          isLowerBetter
-        />
-        <MetricRow 
-          label="Non-Response Rate" 
-          value={data.r1Interview.nonResponseRate} 
-          suffix="%" 
-          status={data.r1Interview.status.nonResponseRate}
-          tooltip="Invitations Not Accepted / Total Scheduled × 100"
-          thresholds={{ good: 'under 25%', watch: '25-30%', flag: '30%+' }}
-          isLowerBetter
-        />
-        <div style={{ marginTop: '12px', padding: '12px 16px', background: '#f8fafc', borderRadius: '6px' }}>
-          <span style={{ fontSize: '13px', color: '#64748b' }}>
-            📊 Scheduled: {data.r1Interview.scheduled} | Conducted: {data.r1Interview.conducted} | 
-            Passed: {data.r1Interview.passed} | Rescheduled: {data.r1Interview.rescheduled}
-          </span>
-        </div>
-      </StageCard>
+        <StageCard title="🎯 STAGE 3: R1 INTERVIEWS">
+          <MetricRow label="Conducted Rate" value={data.r1Interview.conductedRate} suffix="%" status={data.r1Interview.status.conductedRate} tooltip="Conducted / Scheduled × 100" thresholds={{ good: '50%+', watch: '45-50%', flag: 'below 45%' }} />
+          <MetricRow label="Moving Forward Rate" value={data.r1Interview.movingForwardRate} suffix="%" status={data.r1Interview.status.movingForwardRate} tooltip="R1 Passed / Conducted × 100" thresholds={{ good: '50%+', watch: '30-50%', flag: 'below 30%' }} />
+          <MetricRow label="Reschedule Rate" value={data.r1Interview.rescheduleRate} suffix="%" status={data.r1Interview.status.rescheduleRate} tooltip="Total Reschedules / Total Scheduled × 100" thresholds={{ good: 'under 15%', watch: '15-25%', flag: '25%+' }} isLowerBetter />
+          <MetricRow label="Non-Response Rate" value={data.r1Interview.nonResponseRate} suffix="%" status={data.r1Interview.status.nonResponseRate} tooltip="Invitations Not Accepted / Total Scheduled × 100" thresholds={{ good: 'under 25%', watch: '25-30%', flag: '30%+' }} isLowerBetter />
+          <div style={{ marginTop: '16px', padding: '12px 16px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', border: '1px solid var(--glass-border)' }}>
+            <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>📊 Scheduled: {data.r1Interview.scheduled} | Conducted: {data.r1Interview.conducted} | Passed: {data.r1Interview.passed} | Rescheduled: {data.r1Interview.rescheduled}</span>
+          </div>
+        </StageCard>
 
-      {/* Stage 4: R2 Scheduling */}
-      <StageCard title="📅 STAGE 4: R2 SCHEDULING">
-        <MetricRow 
-          label="R2 TAT" 
-          value={data.r2Scheduling.r2TAT} 
-          suffix=" days" 
-          status={data.r2Scheduling.status.r2TAT}
-          tooltip="R2 Scheduled Date - R1 Pass Date"
-          thresholds={{ good: '1-2 days', watch: '3 days', flag: '4+ days' }}
-        />
-        <div style={{ marginTop: '12px', padding: '12px 16px', background: '#f8fafc', borderRadius: '6px' }}>
-          <span style={{ fontSize: '13px', color: '#64748b' }}>
-            📊 Total R2 Interviews: {data.r2Scheduling.total}
-          </span>
-        </div>
-      </StageCard>
+        <StageCard title="📅 STAGE 4: R2 SCHEDULING">
+          <MetricRow label="R2 TAT" value={data.r2Scheduling.r2TAT} suffix=" days" status={data.r2Scheduling.status.r2TAT} tooltip="R2 Scheduled Date - R1 Pass Date" thresholds={{ good: '1-2 days', watch: '3 days', flag: '4+ days' }} />
+          <div style={{ marginTop: '16px', padding: '12px 16px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', border: '1px solid var(--glass-border)' }}>
+            <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>📊 Total R2 Interviews: {data.r2Scheduling.total}</span>
+          </div>
+        </StageCard>
 
-      {/* Stage 5: R2 Interviews */}
-      <StageCard title="🎯 STAGE 5: R2 INTERVIEWS">
-        <MetricRow 
-          label="Conducted Rate" 
-          value={data.r2Interview.conductedRate} 
-          suffix="%" 
-          status={data.r2Interview.status.conductedRate}
-          tooltip="Conducted / Scheduled × 100"
-          thresholds={{ good: '70%+', watch: '60-70%', flag: 'below 60%' }}
-        />
-        <MetricRow 
-          label="Moving Forward Rate" 
-          value={data.r2Interview.movingForwardRate} 
-          suffix="%" 
-          status={data.r2Interview.status.movingForwardRate}
-          tooltip="R2 Passed / Conducted × 100"
-          thresholds={{ good: '70%+', watch: '50-70%', flag: 'below 50%' }}
-        />
-        <MetricRow 
-          label="Reschedule Rate" 
-          value={data.r2Interview.rescheduleRate} 
-          suffix="%" 
-          status={data.r2Interview.status.rescheduleRate}
-          tooltip="Total Reschedules / Total Scheduled × 100"
-          thresholds={{ good: 'under 15%', watch: '15-25%', flag: '25%+' }}
-          isLowerBetter
-        />
-        <MetricRow 
-          label="Non-Response Rate" 
-          value={data.r2Interview.nonResponseRate} 
-          suffix="%" 
-          status={data.r2Interview.status.nonResponseRate}
-          tooltip="Invitations Not Accepted / Total Scheduled × 100"
-          thresholds={{ good: 'under 10%', watch: '10-15%', flag: '15%+' }}
-          isLowerBetter
-        />
-        <div style={{ marginTop: '12px', padding: '12px 16px', background: '#f8fafc', borderRadius: '6px' }}>
-          <span style={{ fontSize: '13px', color: '#64748b' }}>
-            📊 Scheduled: {data.r2Interview.scheduled} | Conducted: {data.r2Interview.conducted} | 
-            Passed: {data.r2Interview.passed} | Rescheduled: {data.r2Interview.rescheduled}
-          </span>
-        </div>
-      </StageCard>
+        <StageCard title="🎯 STAGE 5: R2 INTERVIEWS">
+          <MetricRow label="Conducted Rate" value={data.r2Interview.conductedRate} suffix="%" status={data.r2Interview.status.conductedRate} tooltip="Conducted / Scheduled × 100" thresholds={{ good: '70%+', watch: '60-70%', flag: 'below 60%' }} />
+          <MetricRow label="Moving Forward Rate" value={data.r2Interview.movingForwardRate} suffix="%" status={data.r2Interview.status.movingForwardRate} tooltip="R2 Passed / Conducted × 100" thresholds={{ good: '70%+', watch: '50-70%', flag: 'below 50%' }} />
+          <MetricRow label="Reschedule Rate" value={data.r2Interview.rescheduleRate} suffix="%" status={data.r2Interview.status.rescheduleRate} tooltip="Total Reschedules / Total Scheduled × 100" thresholds={{ good: 'under 15%', watch: '15-25%', flag: '25%+' }} isLowerBetter />
+          <MetricRow label="Non-Response Rate" value={data.r2Interview.nonResponseRate} suffix="%" status={data.r2Interview.status.nonResponseRate} tooltip="Invitations Not Accepted / Total Scheduled × 100" thresholds={{ good: 'under 10%', watch: '10-15%', flag: '15%+' }} isLowerBetter />
+          <div style={{ marginTop: '16px', padding: '12px 16px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', border: '1px solid var(--glass-border)' }}>
+            <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>📊 Scheduled: {data.r2Interview.scheduled} | Conducted: {data.r2Interview.conducted} | Passed: {data.r2Interview.passed} | Rescheduled: {data.r2Interview.rescheduled}</span>
+          </div>
+        </StageCard>
 
-      {/* General: Withdrawal Rate */}
-      <StageCard title="⚠️ GENERAL">
-        <MetricRow 
-          label="Withdrawal Rate" 
-          value={data.general.withdrawalRate} 
-          suffix="%" 
-          status={data.general.status.withdrawalRate}
-          tooltip="Total Withdrawals / Total Candidates × 100"
-          thresholds={{ good: 'under 10%', watch: '10-15%', flag: '15%+' }}
-          isLowerBetter
-        />
-        <div style={{ marginTop: '12px', padding: '12px 16px', background: '#f8fafc', borderRadius: '6px' }}>
-          <span style={{ fontSize: '13px', color: '#64748b' }}>
-            📊 Total Candidates: {data.general.totalCandidates} | Withdrawn: {data.general.totalWithdrawn}
-          </span>
-        </div>
-      </StageCard>
+        <StageCard title="⚠️ GENERAL">
+          <MetricRow label="Withdrawal Rate" value={data.general.withdrawalRate} suffix="%" status={data.general.status.withdrawalRate} tooltip="Total Withdrawals / Total Candidates × 100" thresholds={{ good: 'under 10%', watch: '10-15%', flag: '15%+' }} isLowerBetter />
+          <div style={{ marginTop: '16px', padding: '12px 16px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', border: '1px solid var(--glass-border)' }}>
+            <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>📊 Total Candidates: {data.general.totalCandidates} | Withdrawn: {data.general.totalWithdrawn}</span>
+          </div>
+        </StageCard>
+      </div>
 
-      {/* Source Analytics */}
-      <StageCard title="📊 SOURCE ANALYTICS">
-        {data.sources.topSources.length === 0 ? (
-          <p style={{ color: '#94a3b8', textAlign: 'center', padding: '20px 0' }}>No source data available.</p>
-        ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
-              <thead>
-                <tr style={{ background: '#f8fafc' }}>
-                  <th style={{ padding: '10px 12px', textAlign: 'left', borderBottom: '2px solid #e2e8f0' }}>Source</th>
-                  <th style={{ padding: '10px 12px', textAlign: 'center', borderBottom: '2px solid #e2e8f0' }}>Total</th>
-                  <th style={{ padding: '10px 12px', textAlign: 'center', borderBottom: '2px solid #e2e8f0' }}>Selected</th>
-                  <th style={{ padding: '10px 12px', textAlign: 'center', borderBottom: '2px solid #e2e8f0' }}>Rejected</th>
-                  <th style={{ padding: '10px 12px', textAlign: 'center', borderBottom: '2px solid #e2e8f0' }}>Conversion Rate</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.sources.topSources.map((source, index) => (
-                  <tr key={source.source} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                    <td style={{ padding: '8px 12px', fontWeight: '600' }}>
-                      {index === 0 ? '🥇 ' : index === 1 ? '🥈 ' : index === 2 ? '🥉 ' : ''}
-                      {source.source}
-                    </td>
-                    <td style={{ padding: '8px 12px', textAlign: 'center' }}>{source.total}</td>
-                    <td style={{ padding: '8px 12px', textAlign: 'center', color: '#10b981' }}>{source.selected}</td>
-                    <td style={{ padding: '8px 12px', textAlign: 'center', color: '#ef4444' }}>{source.rejected}</td>
-                    <td style={{ padding: '8px 12px', textAlign: 'center', fontWeight: '600' }}>
-                      <span style={{
-                        color: source.conversionRate > 20 ? '#10b981' : 
-                               source.conversionRate > 10 ? '#f59e0b' : '#ef4444'
-                      }}>
-                        {source.conversionRate.toFixed(1)}%
-                      </span>
-                    </td>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '24px', marginTop: '24px' }}>
+        <StageCard title="📊 SOURCE ANALYTICS">
+          {data.sources.topSources.length === 0 ? (
+            <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '20px 0' }}>No source data available.</p>
+          ) : (
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
+                <thead>
+                  <tr style={{ background: 'rgba(255,255,255,0.02)' }}>
+                    <th style={{ padding: '16px', textAlign: 'left', borderBottom: '1px solid var(--glass-border)', color: 'var(--text-muted)' }}>Source</th>
+                    <th style={{ padding: '16px', textAlign: 'center', borderBottom: '1px solid var(--glass-border)', color: 'var(--text-muted)' }}>Total</th>
+                    <th style={{ padding: '16px', textAlign: 'center', borderBottom: '1px solid var(--glass-border)', color: 'var(--text-muted)' }}>Selected</th>
+                    <th style={{ padding: '16px', textAlign: 'center', borderBottom: '1px solid var(--glass-border)', color: 'var(--text-muted)' }}>Rejected</th>
+                    <th style={{ padding: '16px', textAlign: 'center', borderBottom: '1px solid var(--glass-border)', color: 'var(--text-muted)' }}>Conversion</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </StageCard>
+                </thead>
+                <tbody>
+                  {data.sources.topSources.map((source, index) => (
+                    <tr key={source.source} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                      <td style={{ padding: '16px', fontWeight: '600', color: '#fff' }}>{index === 0 ? '🥇 ' : index === 1 ? '🥈 ' : index === 2 ? '🥉 ' : ''}{source.source}</td>
+                      <td style={{ padding: '16px', textAlign: 'center', color: '#fff' }}>{source.total}</td>
+                      <td style={{ padding: '16px', textAlign: 'center', color: '#34d399', fontWeight: '600' }}>{source.selected}</td>
+                      <td style={{ padding: '16px', textAlign: 'center', color: '#f87171', fontWeight: '600' }}>{source.rejected}</td>
+                      <td style={{ padding: '16px', textAlign: 'center', fontWeight: '700' }}>
+                        <span style={{ color: source.conversionRate > 20 ? '#34d399' : source.conversionRate > 10 ? '#fbbf24' : '#f87171' }}>
+                          {source.conversionRate.toFixed(1)}%
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </StageCard>
 
-      {/* HR Workload */}
-      <StageCard title="📋 HR WORKLOAD">
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
-          <div style={{ padding: '16px', background: '#f8fafc', borderRadius: '8px', textAlign: 'center' }}>
-            <div style={{ fontSize: '12px', color: '#64748b' }}>Pending Reviews</div>
-            <div style={{ fontSize: '28px', fontWeight: '700', color: '#f59e0b' }}>
-              {data.workload.pendingReviews}
+        <StageCard title="📋 HR WORKLOAD">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+            <div style={{ padding: '24px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid var(--glass-border)', textAlign: 'center' }}>
+              <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '1px' }}>Pending Reviews</div>
+              <div style={{ fontSize: '36px', fontWeight: '800', color: '#fbbf24' }}>{data.workload.pendingReviews}</div>
+            </div>
+            <div style={{ padding: '24px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid var(--glass-border)', textAlign: 'center' }}>
+              <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '1px' }}>Pending Interviews</div>
+              <div style={{ fontSize: '36px', fontWeight: '800', color: '#60a5fa' }}>{data.workload.pendingInterviews}</div>
+            </div>
+            <div style={{ padding: '24px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid var(--glass-border)', textAlign: 'center' }}>
+              <div style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '1px' }}>Pending Scheduling</div>
+              <div style={{ fontSize: '36px', fontWeight: '800', color: '#c084fc' }}>{data.workload.pendingScheduling}</div>
+            </div>
+            <div style={{ padding: '24px', background: 'rgba(59,130,246,0.1)', borderRadius: '12px', border: '1px solid var(--primary)', textAlign: 'center' }}>
+              <div style={{ fontSize: '13px', color: '#93c5fd', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '1px' }}>Total Pending Action</div>
+              <div style={{ fontSize: '36px', fontWeight: '800', color: '#fff' }}>{data.workload.totalPending}</div>
             </div>
           </div>
-          <div style={{ padding: '16px', background: '#f8fafc', borderRadius: '8px', textAlign: 'center' }}>
-            <div style={{ fontSize: '12px', color: '#64748b' }}>Pending Interviews</div>
-            <div style={{ fontSize: '28px', fontWeight: '700', color: '#3b82f6' }}>
-              {data.workload.pendingInterviews}
-            </div>
-          </div>
-          <div style={{ padding: '16px', background: '#f8fafc', borderRadius: '8px', textAlign: 'center' }}>
-            <div style={{ fontSize: '12px', color: '#64748b' }}>Pending Scheduling</div>
-            <div style={{ fontSize: '28px', fontWeight: '700', color: '#8b5cf6' }}>
-              {data.workload.pendingScheduling}
-            </div>
-          </div>
-          <div style={{ padding: '16px', background: '#f8fafc', borderRadius: '8px', textAlign: 'center', border: '2px solid #2563eb' }}>
-            <div style={{ fontSize: '12px', color: '#64748b' }}>Total Pending</div>
-            <div style={{ fontSize: '28px', fontWeight: '700', color: '#2563eb' }}>
-              {data.workload.totalPending}
-            </div>
-          </div>
-        </div>
-      </StageCard>
+        </StageCard>
+      </div>
     </div>
   );
 };
 
-// Sub-component: Stage Card
+// Sub-component: Stage Card (Updated to Glass)
 const StageCard = ({ title, children }) => (
-  <div style={{
-    background: '#fff',
-    padding: '24px',
-    borderRadius: '12px',
-    border: '1px solid #e2e8f0',
-    marginBottom: '24px',
-    boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
-  }}>
-    <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', color: '#0f172a' }}>
+  <div className="glass-panel" style={{ padding: '30px' }}>
+    <h3 style={{ margin: '0 0 24px 0', fontSize: '16px', color: '#fff', letterSpacing: '1px', fontWeight: '700' }}>
       {title}
     </h3>
     {children}
   </div>
 );
 
-// Sub-component: Metric Row
+// Sub-component: Metric Row (Updated for Dark Mode)
 const MetricRow = ({ label, value, suffix, status, tooltip, thresholds, isLowerBetter = false }) => {
   const getStatusColor = (status) => {
     switch(status) {
-      case 'good': return '#10b981';
-      case 'watch': return '#f59e0b';
-      case 'flag': return '#ef4444';
-      case 'too_easy': return '#8b5cf6';
-      default: return '#94a3b8';
+      case 'good': return '#34d399'; // green
+      case 'watch': return '#fbbf24'; // yellow
+      case 'flag': return '#f87171'; // red
+      case 'too_easy': return '#c084fc'; // purple
+      default: return '#94a3b8'; // gray
     }
   };
 
   const getStatusLabel = (status) => {
     switch(status) {
-      case 'good': return '✅ Good';
-      case 'watch': return '⚠️ Watch';
-      case 'flag': return '🚨 Flag';
-      case 'too_easy': return '💜 Too Easy';
-      default: return '📊';
+      case 'good': return 'Optimal';
+      case 'watch': return 'Warning';
+      case 'flag': return 'Critical';
+      case 'too_easy': return 'Anomalous';
+      default: return 'No Data';
     }
   };
 
   const displayValue = typeof value === 'number' && !isNaN(value) ? value.toFixed(1) : '0.0';
+  const color = getStatusColor(status);
 
   return (
-    <div style={{
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      padding: '10px 12px',
-      borderBottom: '1px solid #f1f5f9',
-      flexWrap: 'wrap',
-      gap: '8px'
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-        <span style={{ fontSize: '14px', color: '#475569', fontWeight: '500' }}>
-          {label}
-        </span>
-        {tooltip && (
-          <span style={{ fontSize: '14px', cursor: 'help', color: '#94a3b8' }} title={tooltip}>
-            ℹ️
-          </span>
-        )}
-        <span style={{ fontSize: '11px', color: '#94a3b8' }}>
-          {thresholds && `(${thresholds.good} / ${thresholds.watch} / ${thresholds.flag}${thresholds.too_easy ? ' / ' + thresholds.too_easy : ''})`}
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <span style={{ fontSize: '14px', color: '#e2e8f0', fontWeight: '500' }}>{label}</span>
+        {tooltip && <span style={{ fontSize: '14px', cursor: 'help', color: 'var(--text-muted)' }} title={tooltip}>ℹ️</span>}
+        <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+          {thresholds && `(${thresholds.good} / ${thresholds.watch} / ${thresholds.flag})`}
         </span>
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <span style={{
-          fontSize: '18px',
-          fontWeight: '700',
-          color: getStatusColor(status)
-        }}>
-          {displayValue}{suffix}
-        </span>
-        <span style={{
-          fontSize: '12px',
-          fontWeight: '600',
-          color: getStatusColor(status),
-          background: `${getStatusColor(status)}10`,
-          padding: '2px 10px',
-          borderRadius: '12px'
-        }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+        <span style={{ fontSize: '20px', fontWeight: '700', color: '#fff' }}>{displayValue}<span style={{fontSize: '14px', color: 'var(--text-muted)', fontWeight: '500'}}>{suffix}</span></span>
+        <span style={{ fontSize: '11px', fontWeight: '700', color: color, background: `${color}15`, border: `1px solid ${color}40`, padding: '4px 10px', borderRadius: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
           {getStatusLabel(status)}
         </span>
       </div>

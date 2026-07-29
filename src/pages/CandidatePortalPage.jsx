@@ -1,3 +1,4 @@
+// src/pages/CandidatePortalPage.jsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../services/supabase';
@@ -37,21 +38,11 @@ export default function CandidatePortalPage() {
 
   // Form states for new internship registration
   const [regForm, setRegForm] = useState({ 
-    name: '', 
-    phone: '', 
-    domain: '', 
-    source: '', 
-    referrer_contact: '',
-    referrer_name: '',
-    other_source: '',
-    portfolio_link: '',
-    address: '',
-    linkedin_profile: '',
-    college_name: '',
-    degree_course: '',
-    graduation_year: ''
+    name: '', phone: '', domain: '', source: '', referrer_contact: '',
+    referrer_name: '', other_source: '', portfolio_link: '', address: '',
+    linkedin_profile: '', college_name: '', degree_course: '', graduation_year: ''
   });
-  
+
   // File upload states
   const [resumeFile, setResumeFile] = useState(null);
   const [uploading, setUploading] = useState(false);
@@ -64,8 +55,7 @@ export default function CandidatePortalPage() {
   const [rescheduleReason, setRescheduleReason] = useState('');
   const [selectedInterviewId, setSelectedInterviewId] = useState(null);
   const [onboardingData, setOnboardingData] = useState(null);
-  
-  // Anti double-click lock execution block state variable
+
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Timer state
@@ -90,39 +80,20 @@ export default function CandidatePortalPage() {
       try {
         const { data, error } = await supabase.from('assignment_templates').select('domain');
         if (error) {
-          console.error("Error loading domains:", error);
           setDomains([
-            "Automation & Operations",
-            "Brand Management & Outreach",
-            "Business Development",
-            "Clinical Psychologist",
-            "Content Creation",
-            "Creative Design",
-            "Graphic Design",
-            "HR Psychologist",
-            "Human Resources (HR)",
-            "Lead Generation",
-            "Marketing",
-            "Media & Public Relations (PR)",
-            "Motion Graphics",
-            "Operations",
-            "Project Management",
-            "Python Automation",
-            "Sales and Marketing",
-            "Social Media Management",
-            "Talent Acquisition",
-            "Video Editing/Making",
-            "UI/UX Design",
-            "Full stack Developer"
+            "Automation & Operations", "Brand Management & Outreach", "Business Development",
+            "Clinical Psychologist", "Content Creation", "Creative Design", "Graphic Design",
+            "HR Psychologist", "Human Resources (HR)", "Lead Generation", "Marketing",
+            "Media & Public Relations (PR)", "Motion Graphics", "Operations", "Project Management",
+            "Python Automation", "Sales and Marketing", "Social Media Management", "Talent Acquisition",
+            "Video Editing/Making", "UI/UX Design", "Full stack Developer"
           ]);
           return;
         }
         if (data && data.length > 0) {
           setDomains([...new Set(data.map(d => d.domain))]);
         }
-      } catch (err) {
-        console.error("Error in loadDomains:", err);
-      }
+      } catch (err) { console.error("Error in loadDomains:", err); }
     }
     loadDomains();
   }, []);
@@ -130,18 +101,11 @@ export default function CandidatePortalPage() {
   useEffect(() => {
     const savedEmail = localStorage.getItem('candidateEmail');
     if (savedEmail) {
-      supabase
-        .from('candidates')
-        .select('*')
-        .eq('email', savedEmail)
-        .single()
-        .then(({ data }) => {
-          if (data) setCandidate(data);
-        });
+      supabase.from('candidates').select('*').eq('email', savedEmail).single()
+        .then(({ data }) => { if (data) setCandidate(data); });
     }
   }, []);
 
-  // Sync relational state tables when candidate profile is loaded
   useEffect(() => {
     if (candidate) {
       fetchWorkflowContext();
@@ -151,460 +115,175 @@ export default function CandidatePortalPage() {
     }
   }, [candidate]);
 
-  // ✅ Fetch uploaded files for this assignment
   async function fetchUploadedFiles() {
     if (!candidate || !assignment) return;
-    
-    const { data, error } = await supabase
-      .from('assignment_files')
-      .select('*')
-      .eq('candidate_id', candidate.id)
-      .eq('assignment_id', assignment.id)
-      .order('created_at', { ascending: false });
-    
-    if (error) {
-      console.error('Error fetching uploaded files:', error);
-    } else {
-      setUploadedFiles(data || []);
-    }
+    const { data, error } = await supabase.from('assignment_files').select('*').eq('candidate_id', candidate.id).eq('assignment_id', assignment.id).order('created_at', { ascending: false });
+    if (!error) setUploadedFiles(data || []);
   }
 
-  // Fetch questions
   async function fetchQuestions() {
     if (!candidate) return;
-    
-    const { data, error } = await supabase
-      .from('candidate_questions')
-      .select('*, question_replies(*)')
-      .eq('candidate_id', candidate.id)
-      .order('created_at', { ascending: false });
-    
-    if (error) {
-      console.error('Error fetching questions:', error);
-    } else {
-      setQuestions(data || []);
-    }
+    const { data, error } = await supabase.from('candidate_questions').select('*, question_replies(*)').eq('candidate_id', candidate.id).order('created_at', { ascending: false });
+    if (!error) setQuestions(data || []);
   }
 
-  // Fetch FAQs with category
   async function fetchFAQs() {
-    const { data, error } = await supabase
-      .from('faqs')
-      .select('*')
-      .eq('is_active', true)
-      .order('category', { ascending: true })
-      .order('created_at', { ascending: false });
-    
-    if (error) {
-      console.error('Error fetching FAQs:', error);
-    } else {
-      setFaqs(data || []);
-    }
+    const { data, error } = await supabase.from('faqs').select('*').eq('is_active', true).order('category', { ascending: true }).order('created_at', { ascending: false });
+    if (!error) setFaqs(data || []);
   }
 
   async function fetchWorkflowContext() {
     if (!candidate) return;
-
     const { data: updatedCand } = await supabase.from('candidates').select('*').eq('id', candidate.id).single();
     if (updatedCand) setCandidate(updatedCand);
 
     const currentStage = updatedCand ? updatedCand.current_stage : candidate.current_stage;
     const currentDomain = updatedCand ? updatedCand.domain : candidate.domain;
 
-    let { data: assign, error: assignError } = await supabase
-      .from('assignments')
-      .select('*')
-      .eq('candidate_id', candidate.id)
-      .maybeSingle();
+    let { data: assign, error: assignError } = await supabase.from('assignments').select('*').eq('candidate_id', candidate.id).maybeSingle();
 
     if (currentStage === 'Assignment' && !assign && !assignError) {
-      const { data: template } = await supabase
-        .from('assignment_templates')
-        .select('*')
-        .eq('domain', currentDomain)
-        .maybeSingle();
-
+      const { data: template } = await supabase.from('assignment_templates').select('*').eq('domain', currentDomain).maybeSingle();
       if (template) {
-        const { data: newAssign, error: insertError } = await supabase
-          .from('assignments')
-          .insert({
-            candidate_id: candidate.id,
-            assignment_template_id: template.id,
-            assignment_title: template.assignment_name,
-            assignment_type: 'Domain Task',
-            assignment_status: 'Assigned',
-            assigned_by: 'System Admin',
-            task_link_template: template.assignment_link
-          })
-          .select()
-          .single();
-
-        if (!insertError && newAssign) {
-          assign = newAssign;
-        }
+        const { data: newAssign, error: insertError } = await supabase.from('assignments').insert({
+          candidate_id: candidate.id, assignment_template_id: template.id, assignment_title: template.assignment_name, assignment_type: 'Domain Task', assignment_status: 'Assigned', assigned_by: 'System Admin', task_link_template: template.assignment_link
+        }).select().single();
+        if (!insertError && newAssign) assign = newAssign;
       }
     }
-
     setAssignment(assign);
+
     if (assign?.submitted_link) {
       setSubmissionUrl(assign.submitted_link);
-      
-      // Check if submission was late
       if (assign.submitted_at) {
         const deadline = new Date(assign.deadline).getTime();
         const submittedAt = new Date(assign.submitted_at).getTime();
         if (submittedAt > deadline) {
           setIsLate(true);
           const lateMs = submittedAt - deadline;
-          const lateHours = Math.floor(lateMs / (1000 * 60 * 60));
-          const lateMinutes = Math.floor((lateMs % (1000 * 60 * 60)) / (1000 * 60));
-          setLateDuration(`${lateHours}h ${lateMinutes}m`);
+          setLateDuration(`${Math.floor(lateMs / (1000 * 60 * 60))}h ${Math.floor((lateMs % (1000 * 60 * 60)) / (1000 * 60))}m`);
         }
       }
     }
 
-    const { data: ivs } = await supabase
-      .from('interviews')
-      .select('*')
-      .eq('candidate_id', candidate.id)
-      .in('status', ['Scheduled', 'Reschedule_Requested', 'Completed', 'On Hold'])
-      .not('scheduled_date_time', 'is', null)
-      .order('id', { ascending: false });
-
+    const { data: ivs } = await supabase.from('interviews').select('*').eq('candidate_id', candidate.id).in('status', ['Scheduled', 'Reschedule_Requested', 'Completed', 'On Hold']).not('scheduled_date_time', 'is', null).order('id', { ascending: false });
     setInterviews(ivs || []);
     
-    // Fetch onboarding data with probation meeting details
     const { data: ob } = await supabase.from('onboarding').select('*').eq('candidate_id', candidate.id).maybeSingle();
     setOnboardingData(ob);
   }
 
-  // TIMER LOGIC
   useEffect(() => {
     if (!assignment || !assignment.deadline) return;
-    if (assignment.assignment_status === 'Submitted' || assignment.assignment_status === 'Evaluated') {
-      setTimeLeft(null);
-      return;
-    }
-
+    if (assignment.assignment_status === 'Submitted' || assignment.assignment_status === 'Evaluated') { setTimeLeft(null); return; }
     const updateTimer = () => {
       const now = new Date().getTime();
       const deadline = new Date(assignment.deadline).getTime();
       const distance = deadline - now;
-
       if (distance < 0) {
         setTimeLeft(0);
-        // Calculate how late it is
         const lateMs = Math.abs(distance);
-        const lateHours = Math.floor(lateMs / (1000 * 60 * 60));
-        const lateMinutes = Math.floor((lateMs % (1000 * 60 * 60)) / (1000 * 60));
-        setLateDuration(`${lateHours}h ${lateMinutes}m`);
-        setIsLate(true);
-        return;
+        setLateDuration(`${Math.floor(lateMs / (1000 * 60 * 60))}h ${Math.floor((lateMs % (1000 * 60 * 60)) / (1000 * 60))}m`);
+        setIsLate(true); return;
       }
-
-      setTimeLeft(distance);
-      setIsLate(false);
+      setTimeLeft(distance); setIsLate(false);
     };
-
-    updateTimer(); // Initial call
+    updateTimer(); 
     const timerInterval = setInterval(updateTimer, 1000);
-
     return () => clearInterval(timerInterval);
   }, [assignment]);
 
-  function isAssignmentExpired() {
-    if (!assignment || !assignment.created_at) return false;
-    if (assignment.hr_override_approved === true || assignment.hr_override_approved === 'TRUE') return false;
-    if (timeLeft === 0) return true;
-
-    const assignedTime = new Date(assignment.created_at).getTime();
-    const currentTime = new Date().getTime();
-    const twoDaysInMs = 2 * 24 * 60 * 60 * 1000;
-    return (currentTime - assignedTime) > twoDaysInMs;
-  }
-
   function isSubmissionDisabled() {
-    // Only disable if already submitted or evaluated
-    return assignment?.assignment_status === 'Submitted' || 
-           assignment?.assignment_status === 'Evaluated' || 
-           isSubmitting;
+    return assignment?.assignment_status === 'Submitted' || assignment?.assignment_status === 'Evaluated' || isSubmitting;
   }
 
-  // Upload resume to Supabase Storage
   async function uploadResume(file, candidateId) {
     const fileExt = file.name.split('.').pop();
     const fileName = `${candidateId}/${Date.now()}.${fileExt}`;
     const filePath = `resumes/${fileName}`;
-
-    console.log("📤 Uploading resume to:", filePath);
-    console.log("📄 File size:", (file.size / 1024 / 1024).toFixed(2), "MB");
-
-    const { data, error } = await supabase.storage
-      .from('resumes')
-      .upload(filePath, file, {
-        cacheControl: '3600',
-        upsert: false,
-        contentType: 'application/pdf'
-      });
-
-    if (error) {
-      console.error('❌ Error uploading resume:', error);
-      throw error;
-    }
-
-    console.log("✅ Upload successful:", data);
-
-    // Get public URL for the uploaded file
-    const { data: urlData } = supabase.storage
-      .from('resumes')
-      .getPublicUrl(filePath);
-
-    console.log("🔗 Public URL:", urlData.publicUrl);
-
+    const { data, error } = await supabase.storage.from('resumes').upload(filePath, file, { cacheControl: '3600', upsert: false, contentType: 'application/pdf' });
+    if (error) throw error;
+    const { data: urlData } = supabase.storage.from('resumes').getPublicUrl(filePath);
     return urlData.publicUrl;
   }
 
-  // Validate file before upload
   function validateFile(file) {
-    // Check file type (only PDF)
-    if (file.type !== 'application/pdf') {
-      alert('Only PDF files are allowed. Please upload a PDF file.');
-      return false;
-    }
-
-    // Check file size (max 100MB)
-    if (file.size > 100 * 1024 * 1024) {
-      alert('File size exceeds 100MB limit. Please upload a smaller file.');
-      return false;
-    }
-
+    if (file.type !== 'application/pdf') { alert('Only PDF files are allowed. Please upload a PDF file.'); return false; }
+    if (file.size > 100 * 1024 * 1024) { alert('File size exceeds 100MB limit. Please upload a smaller file.'); return false; }
     return true;
   }
 
-  // ✅ Upload assignment file to storage - With bucket creation fallback
   async function uploadAssignmentFile(file) {
     if (!candidate || !assignment) return null;
-    
     const fileExt = file.name.split('.').pop();
     const fileName = `${candidate.id}/${assignment.id}/${Date.now()}_${file.name}`;
     const filePath = `assignment_files/${fileName}`;
-
-    console.log("📤 Uploading assignment file to:", filePath);
-    console.log("📄 File size:", (file.size / 1024 / 1024).toFixed(2), "MB");
-
     try {
-      // Try uploading to assignment_files bucket first
-      let { data, error } = await supabase.storage
-        .from('assignment_files')
-        .upload(filePath, file, {
-          cacheControl: '3600',
-          upsert: false
-        });
-
+      let { data, error } = await supabase.storage.from('assignment_files').upload(filePath, file, { cacheControl: '3600', upsert: false });
       if (error) {
-        console.error('❌ Error uploading to assignment_files bucket:', error);
-        
-        // If bucket doesn't exist, try creating it or fallback to resumes bucket
         if (error.message?.includes('bucket') || error.statusCode === 404) {
-          console.log('⚠️ assignment_files bucket not found, trying to create it...');
-          
-          // Try to create the bucket
-          const { error: createError } = await supabase.storage.createBucket('assignment_files', {
-            public: true,
-            allowedMimeTypes: ['*/*'],
-            fileSizeLimit: 104857600 // 100MB
-          });
-          
-          if (createError) {
-            console.error('❌ Failed to create bucket:', createError);
-            // Fallback to resumes bucket
-            console.log('🔄 Falling back to resumes bucket...');
-            return await uploadAssignmentFileToResumesBucket(file);
-          }
-          
-          // Retry upload after bucket creation
-          const retryResult = await supabase.storage
-            .from('assignment_files')
-            .upload(filePath, file, {
-              cacheControl: '3600',
-              upsert: false
-            });
-          
-          if (retryResult.error) {
-            console.error('❌ Retry upload failed:', retryResult.error);
-            throw retryResult.error;
-          }
-          
-          data = retryResult.data;
-        } else {
-          throw error;
-        }
+          const { error: createError } = await supabase.storage.createBucket('assignment_files', { public: true, allowedMimeTypes: ['*/*'], fileSizeLimit: 104857600 });
+          if (createError) return await uploadAssignmentFileToResumesBucket(file);
+          const retryResult = await supabase.storage.from('assignment_files').upload(filePath, file, { cacheControl: '3600', upsert: false });
+          if (retryResult.error) throw retryResult.error;
+        } else throw error;
       }
-
-      console.log("✅ Assignment file uploaded successfully:", data);
-
-      const { data: urlData } = supabase.storage
-        .from('assignment_files')
-        .getPublicUrl(filePath);
-
-      return {
-        file_name: file.name,
-        file_path: filePath,
-        file_url: urlData.publicUrl,
-        file_size: file.size,
-        file_type: file.type
-      };
+      const { data: urlData } = supabase.storage.from('assignment_files').getPublicUrl(filePath);
+      return { file_name: file.name, file_path: filePath, file_url: urlData.publicUrl, file_size: file.size, file_type: file.type };
     } catch (error) {
-      console.error('Upload error:', error);
-      // Try fallback to resumes bucket
-      console.log('🔄 Falling back to resumes bucket...');
       return await uploadAssignmentFileToResumesBucket(file);
     }
   }
 
-  // ✅ Fallback: Upload to resumes bucket
   async function uploadAssignmentFileToResumesBucket(file) {
     if (!candidate || !assignment) return null;
-    
     const fileExt = file.name.split('.').pop();
     const fileName = `assignments/${candidate.id}/${assignment.id}/${Date.now()}_${file.name}`;
-    const filePath = `${fileName}`;
-
-    console.log("📤 Uploading to resumes bucket:", filePath);
-
-    const { data, error } = await supabase.storage
-      .from('resumes')
-      .upload(filePath, file, {
-        cacheControl: '3600',
-        upsert: false
-      });
-
-    if (error) {
-      console.error('❌ Error uploading to resumes bucket:', error);
-      throw error;
-    }
-
-    const { data: urlData } = supabase.storage
-      .from('resumes')
-      .getPublicUrl(filePath);
-
-    return {
-      file_name: file.name,
-      file_path: filePath,
-      file_url: urlData.publicUrl,
-      file_size: file.size,
-      file_type: file.type
-    };
+    const { data, error } = await supabase.storage.from('resumes').upload(fileName, file, { cacheControl: '3600', upsert: false });
+    if (error) throw error;
+    const { data: urlData } = supabase.storage.from('resumes').getPublicUrl(fileName);
+    return { file_name: file.name, file_path: fileName, file_url: urlData.publicUrl, file_size: file.size, file_type: file.type };
   }
 
-  // ✅ Handle assignment file upload
   async function handleFileUpload(e) {
     const files = e.target.files;
     if (files.length === 0) return;
-
-    // Check if already 5 files uploaded
-    if (uploadedFiles.length + files.length > 5) {
-      alert(`You can only upload up to 5 files. You already have ${uploadedFiles.length} file(s) uploaded.`);
-      e.target.value = '';
-      return;
-    }
-
+    if (uploadedFiles.length + files.length > 5) { alert(`You can only upload up to 5 files.`); e.target.value = ''; return; }
     setIsUploadingFiles(true);
-
     try {
       for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        
-        // ✅ Check file size (max 100MB per file)
-        if (file.size > 100 * 1024 * 1024) {
-          alert(`File "${file.name}" exceeds 100MB limit. Please upload a smaller file.`);
-          continue;
-        }
-
-        const uploadedFile = await uploadAssignmentFile(file);
-        
+        if (files[i].size > 100 * 1024 * 1024) { alert(`File "${files[i].name}" exceeds 100MB limit.`); continue; }
+        const uploadedFile = await uploadAssignmentFile(files[i]);
         if (uploadedFile) {
-          // Save file record to database
-          const { data: fileRecord, error: dbError } = await supabase
-            .from('assignment_files')
-            .insert({
-              candidate_id: candidate.id,
-              assignment_id: assignment.id,
-              file_name: uploadedFile.file_name,
-              file_path: uploadedFile.file_path,
-              file_url: uploadedFile.file_url,
-              file_size: uploadedFile.file_size,
-              file_type: uploadedFile.file_type
-            })
-            .select()
-            .single();
-
-          if (dbError) {
-            console.error('Error saving file record:', dbError);
-            alert(`Failed to save file "${file.name}" record.`);
-          } else {
-            setUploadedFiles(prev => [fileRecord, ...prev]);
-          }
+          const { data: fileRecord, error: dbError } = await supabase.from('assignment_files').insert({
+            candidate_id: candidate.id, assignment_id: assignment.id, file_name: uploadedFile.file_name, file_path: uploadedFile.file_path, file_url: uploadedFile.file_url, file_size: uploadedFile.file_size, file_type: uploadedFile.file_type
+          }).select().single();
+          if (dbError) alert(`Failed to save file "${files[i].name}" record.`); else setUploadedFiles(prev => [fileRecord, ...prev]);
         }
       }
-    } catch (error) {
-      console.error('Error uploading files:', error);
-      alert('Failed to upload files. Please try again.');
-    } finally {
-      setIsUploadingFiles(false);
-      e.target.value = '';
-    }
+    } catch (error) { alert('Failed to upload files. Please try again.'); } 
+    finally { setIsUploadingFiles(false); e.target.value = ''; }
   }
 
-  // ✅ Remove uploaded file
   async function handleRemoveFile(fileId) {
     if (!confirm('Are you sure you want to remove this file?')) return;
-
     try {
-      // Delete from database
-      const { error: dbError } = await supabase
-        .from('assignment_files')
-        .delete()
-        .eq('id', fileId);
-
-      if (dbError) {
-        console.error('Error deleting file record:', dbError);
-        alert('Failed to remove file.');
-        return;
-      }
-
-      // Update state
+      const { error: dbError } = await supabase.from('assignment_files').delete().eq('id', fileId);
+      if (dbError) { alert('Failed to remove file.'); return; }
       setUploadedFiles(prev => prev.filter(f => f.id !== fileId));
-    } catch (error) {
-      console.error('Error removing file:', error);
-      alert('Failed to remove file.');
-    }
+    } catch (error) { alert('Failed to remove file.'); }
   }
 
-  // ✅ Check if submission is valid (at least one file OR link provided)
   function isSubmissionValid() {
-    if (assignment?.assignment_status === 'Submitted' || assignment?.assignment_status === 'Evaluated') {
-      return false;
-    }
-    const hasLink = assignmentLink.trim() !== '';
-    const hasFiles = uploadedFiles.length > 0;
-    return hasLink || hasFiles;
+    if (assignment?.assignment_status === 'Submitted' || assignment?.assignment_status === 'Evaluated') return false;
+    return assignmentLink.trim() !== '' || uploadedFiles.length > 0;
   }
 
-  // ✅ Handle assignment submission with files and link
   async function handleSubmitAssignment() {
-    if (!isSubmissionValid()) {
-      alert('Please either upload at least one file or provide a valid link to submit your assignment.');
-      return;
-    }
-
-    if (assignment?.assignment_status === 'Evaluated') {
-      alert('Assignment is currently being evaluated by HR. No further changes allowed.');
-      return;
-    }
-
-    setIsSubmitting(true);
+    if (!isSubmissionValid()) { alert('Please upload at least one file or provide a valid link to submit.'); return; }
+    if (assignment?.assignment_status === 'Evaluated') { alert('Assignment is currently being evaluated by HR.'); return; }
     
+    setIsSubmitting(true);
     const now = new Date().toISOString();
     const deadline = new Date(assignment.deadline).getTime();
     const submittedAt = new Date(now).getTime();
@@ -613,52 +292,27 @@ export default function CandidatePortalPage() {
     let lateDurationText = null;
     if (isLateSubmission) {
       const lateMs = submittedAt - deadline;
-      const lateHours = Math.floor(lateMs / (1000 * 60 * 60));
-      const lateMinutes = Math.floor((lateMs % (1000 * 60 * 60)) / (1000 * 60));
-      lateDurationText = `${lateHours}h ${lateMinutes}m`;
+      lateDurationText = `${Math.floor(lateMs / (1000 * 60 * 60))}h ${Math.floor((lateMs % (1000 * 60 * 60)) / (1000 * 60))}m`;
     }
-
-    // Prepare submission data
-    const updateData = {
-      submitted_at: now,
-      assignment_status: 'Submitted'
-    };
-
-    // If link is provided, add it as submitted_link
-    if (assignmentLink.trim() !== '') {
-      updateData.submitted_link = assignmentLink.trim();
-    } else {
-      // If no link but files are uploaded, set a placeholder indicating file submission
-      updateData.submitted_link = `File submission (${uploadedFiles.length} files uploaded)`;
-    }
-
-    // If late, add metadata
-    if (isLateSubmission) {
-      updateData.is_late_submission = true;
-      updateData.late_duration = lateDurationText;
-    }
-
+    
+    const updateData = { submitted_at: now, assignment_status: 'Submitted' };
+    if (assignmentLink.trim() !== '') updateData.submitted_link = assignmentLink.trim();
+    else updateData.submitted_link = `File submission (${uploadedFiles.length} files uploaded)`;
+    
+    if (isLateSubmission) { updateData.is_late_submission = true; updateData.late_duration = lateDurationText; }
+    
     const { error } = await supabase.from('assignments').update(updateData).eq('candidate_id', candidate.id);
-
-    if (error) {
-      alert(`Submission failure: ${error.message}`);
-      setIsSubmitting(false);
-    } else {
-      if (isLateSubmission) {
-        alert(`✅ Assignment submitted successfully!\n\n⚠️ LATE SUBMISSION: Your submission is ${lateDurationText} past the deadline. HR will be notified.`);
-      } else {
-        alert('✅ Assignment submitted successfully!');
-      }
-      await fetchWorkflowContext();
-      await fetchUploadedFiles();
-      setIsSubmitting(false);
+    
+    if (error) { alert(`Submission failure: ${error.message}`); setIsSubmitting(false); } 
+    else {
+      if (isLateSubmission) alert(`Assignment submitted successfully!\n\nLATE SUBMISSION: Your submission is ${lateDurationText} past the deadline. HR will be notified.`);
+      else alert('Assignment submitted successfully!');
+      await fetchWorkflowContext(); await fetchUploadedFiles(); setIsSubmitting(false);
     }
   }
 
-  // Validate form before submission
   function validateForm() {
     const errors = {};
-    
     if (!regForm.name.trim()) errors.name = 'Full name is required';
     if (!emailInput.trim()) errors.email = 'Email is required';
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailInput.trim())) errors.email = 'Please enter a valid email';
@@ -676,764 +330,272 @@ export default function CandidatePortalPage() {
       if (!regForm.referrer_name.trim()) errors.referrer_name = 'Referrer name is required';
       if (!regForm.referrer_contact.trim()) errors.referrer_contact = 'Referrer contact is required';
     }
-    
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   }
 
   async function handleLogin(e) {
-    e.preventDefault();
-    setErrorMsg('');
+    e.preventDefault(); setErrorMsg('');
     if (!emailInput.trim()) return;
-
+    
     const { data, error } = await supabase.from('candidates').select('*').eq('email', emailInput.trim().toLowerCase()).maybeSingle();
-
-    if (error) {
-      setErrorMsg('A database retrieval anomaly occurred.');
-    } else if (data) {
+    if (error) { setErrorMsg('A database retrieval anomaly occurred.'); } 
+    else if (data) {
       localStorage.setItem('candidateEmail', data.email);
-      setCandidate(data);
-      
-      navigate('/portal', { replace: true });
+      setAssignment(null); setInterviews([]); setOnboardingData(null); setQuestions([]); setUploadedFiles([]); setAssignmentLink('');
+      setCandidate(data); navigate('/portal', { replace: true });
     } else {
-      setErrorMsg('Email address not registered. Proceed to fill out the internship form.');
-      setIsRegistering(true);
+      setErrorMsg('Email address not registered. Proceed to fill out the internship form.'); setIsRegistering(true);
     }
   }
 
   async function handleRegister(e) {
-    e.preventDefault();
-    setFormErrors({});
+    e.preventDefault(); setFormErrors({});
+    if (!validateForm()) { const firstError = document.querySelector('.field-error'); if (firstError) firstError.scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
     
-    // Validate all fields
-    if (!validateForm()) {
-      // Scroll to first error
-      const firstError = document.querySelector('.field-error');
-      if (firstError) firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      return;
-    }
-
-    // If source is 'Other', get the final source
-    let finalSource = regForm.source;
-    if (regForm.source === 'Other') {
-      finalSource = regForm.other_source.trim();
-    }
-
-    // Validate email
+    let finalSource = regForm.source; if (regForm.source === 'Other') finalSource = regForm.other_source.trim();
     const cleanEmail = emailInput.trim().toLowerCase();
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(cleanEmail)) {
-      setFormErrors({ ...formErrors, email: 'Please enter a valid email address.' });
-      return;
-    }
-
+    
     const { data: checkExist } = await supabase.from('candidates').select('*').eq('email', cleanEmail).maybeSingle();
     if (checkExist) {
       alert('This email profile matches a pre-existing profile. Logging into workspace.');
-      setCandidate(checkExist);
-      return;
+      localStorage.setItem('candidateEmail', checkExist.email);
+      setAssignment(null); setInterviews([]); setOnboardingData(null); setQuestions([]); setUploadedFiles([]); setAssignmentLink('');
+      setCandidate(checkExist); navigate('/portal', { replace: true }); return;
     }
-
-    // Start upload
+    
     setUploading(true);
-
     try {
-      // Step 1: Create the candidate record first
-      const insertData = {
-        name: regForm.name.trim(),
-        email: cleanEmail,
-        phone: regForm.phone.trim(),
-        domain: regForm.domain,
-        source: finalSource,
-        current_stage: 'Applied',
-        status: 'In_Progress',
-        resume_review: 'Pending',
-        portfolio_link: regForm.portfolio_link || null,
-        address: regForm.address.trim() || null,
-        linkedin_profile: regForm.linkedin_profile || null,
-        college_name: regForm.college_name.trim() || null,
-        degree_course: regForm.degree_course.trim() || null,
-        graduation_year: regForm.graduation_year ? parseInt(regForm.graduation_year) : null
-      };
-
-      console.log("📝 Creating candidate with data:", insertData);
-
-      const { data: newCand, error: insertError } = await supabase
-        .from('candidates')
-        .insert(insertData)
-        .select()
-        .single();
-
-      if (insertError) {
-        console.error("❌ Error creating candidate:", insertError);
-        setErrorMsg(`Registration operation aborted: ${insertError.message}`);
-        setUploading(false);
-        return;
-      }
-
-      console.log("✅ Candidate created with ID:", newCand.id);
-
-      // Step 2: Upload resume to storage
+      const insertData = { name: regForm.name.trim(), email: cleanEmail, phone: regForm.phone.trim(), domain: regForm.domain, source: finalSource, current_stage: 'Applied', status: 'In_Progress', resume_review: 'Pending', portfolio_link: regForm.portfolio_link || null, address: regForm.address.trim() || null, linkedin_profile: regForm.linkedin_profile || null, college_name: regForm.college_name.trim() || null, degree_course: regForm.degree_course.trim() || null, graduation_year: regForm.graduation_year ? parseInt(regForm.graduation_year) : null };
+      const { data: newCand, error: insertError } = await supabase.from('candidates').insert(insertData).select().single();
+        
+      if (insertError) { setErrorMsg(`Registration operation aborted: ${insertError.message}`); setUploading(false); return; }
+      
       let resumeUrl = null;
-      try {
-        resumeUrl = await uploadResume(resumeFile, newCand.id);
-        console.log("✅ Resume uploaded successfully:", resumeUrl);
-      } catch (uploadError) {
-        console.error("❌ Upload failed:", uploadError);
-        alert('Resume upload failed. Please try again.');
-        setUploading(false);
-        return;
-      }
-
-      // Step 3: Update candidate with resume URL
+      try { resumeUrl = await uploadResume(resumeFile, newCand.id); } 
+      catch (uploadError) { alert('Resume upload failed. Please try again.'); setUploading(false); return; }
+      
       if (resumeUrl) {
-        console.log("💾 Updating candidate with resume URL:", resumeUrl);
-        const { error: updateError } = await supabase
-          .from('candidates')
-          .update({ resume_link: resumeUrl })
-          .eq('id', newCand.id);
-
-        if (updateError) {
-          console.error("❌ Error updating resume link:", updateError);
-          alert('Failed to save resume link. Please contact support.');
-          setUploading(false);
-          return;
-        }
-        console.log("✅ Resume link saved successfully!");
+        const { error: updateError } = await supabase.from('candidates').update({ resume_link: resumeUrl }).eq('id', newCand.id);
+        if (updateError) { alert('Failed to save resume link. Please contact support.'); setUploading(false); return; }
       }
-
-      // Step 4: If source is Referral, create entry in referrals table
+      
       if (regForm.source === 'Referral') {
-        const { error: referralError } = await supabase
-          .from('referrals')
-          .insert({
-            candidate_id: newCand.id,
-            candidate_name: regForm.name.trim(),
-            candidate_email: cleanEmail,
-            referrer_name: regForm.referrer_name.trim(),
-            referrer_contact: regForm.referrer_contact.trim(),
-            status: 'Pending'
-          });
-
-        if (referralError) {
-          console.error("❌ Error saving referral data:", referralError);
-        } else {
-          console.log("✅ Referral data saved successfully");
-        }
+        await supabase.from('referrals').insert({ candidate_id: newCand.id, candidate_name: regForm.name.trim(), candidate_email: cleanEmail, referrer_name: regForm.referrer_name.trim(), referrer_contact: regForm.referrer_contact.trim(), status: 'Pending' });
       }
-
-      alert('✅ Registered successfully!');
       
-      localStorage.removeItem('candidateEmail');
-      setRegForm({ 
-        name: '', 
-        phone: '', 
-        domain: '', 
-        source: '', 
-        referrer_contact: '',
-        referrer_name: '',
-        other_source: '',
-        portfolio_link: '',
-        address: '',
-        linkedin_profile: '',
-        college_name: '',
-        degree_course: '',
-        graduation_year: ''
-      });
-      setResumeFile(null);
-      setEmailInput('');
-      setUploading(false);
-      navigate('/login', { replace: true });
-      
-    } catch (err) {
-      console.error('❌ Registration error:', err);
-      alert('An error occurred during registration. Please try again.');
-      setUploading(false);
-    }
+      alert('Registered successfully! Taking you to your workspace...');
+      localStorage.setItem('candidateEmail', newCand.email);
+      setAssignment(null); setInterviews([]); setOnboardingData(null); setQuestions([]); setUploadedFiles([]); setAssignmentLink('');
+      setCandidate(newCand);
+      setRegForm({ name: '', phone: '', domain: '', source: '', referrer_contact: '', referrer_name: '', other_source: '', portfolio_link: '', address: '', linkedin_profile: '', college_name: '', degree_course: '', graduation_year: '' });
+      setResumeFile(null); setEmailInput(''); setUploading(false);
+      navigate('/portal', { replace: true });
+    } catch (err) { alert('An error occurred during registration. Please try again.'); setUploading(false); }
   }
 
-  // Submit question
   async function handleSubmitQuestion(e) {
     e.preventDefault();
-    
-    if (!newQuestion.trim()) {
-      alert('Please enter your question.');
-      return;
-    }
+    if (!newQuestion.trim()) { alert('Please enter your question.'); return; }
     
     setIsSubmittingQuestion(true);
-    
-    const { data, error } = await supabase
-      .from('candidate_questions')
-      .insert({
-        candidate_id: candidate.id,
-        candidate_name: candidate.name || candidate.full_name,
-        candidate_email: candidate.email,
-        question: newQuestion.trim(),
-        status: 'Pending',
-        is_public: false
-      })
-      .select()
-      .single();
-    
-    if (error) {
-      alert(`Failed to submit question: ${error.message}`);
-    } else {
-      alert('✅ Your question has been submitted. HR will respond shortly.');
-      setNewQuestion('');
-      await fetchQuestions();
-    }
-    
+    const { data, error } = await supabase.from('candidate_questions').insert({
+        candidate_id: candidate.id, candidate_name: candidate.name || candidate.full_name, candidate_email: candidate.email, question: newQuestion.trim(), status: 'Pending', is_public: false
+      }).select().single();
+      
+    if (error) { alert(`Failed to submit question: ${error.message}`); } 
+    else { alert('Your question has been submitted. HR will respond shortly.'); setNewQuestion(''); await fetchQuestions(); }
     setIsSubmittingQuestion(false);
   }
 
   async function handleAcceptInterview(interviewId) {
-    const { error } = await supabase
-      .from('interviews')
-      .update({ candidate_accepted: true })
-      .eq('id', interviewId);
-    
-    if (error) {
-      console.error("Error accepting interview:", error);
-      alert("Failed to update status. Please try again.");
-    } else {
-      alert("Interview accepted! HR has been notified.");
-      fetchWorkflowContext(); 
-    }
+    const { error } = await supabase.from('interviews').update({ candidate_accepted: true }).eq('id', interviewId);
+    if (error) { alert("Failed to update status. Please try again."); } 
+    else { alert("Interview accepted! HR has been notified."); fetchWorkflowContext(); }
   }
 
   async function handleRequestReschedule(e) {
     e.preventDefault();
     const selectedInterview = interviews.find(x => x.id === selectedInterviewId);
-    if ((selectedInterview?.reschedule_count || 0) >= 2) {
-      alert('Maximum 2 reschedule requests allowed.');
-      return;
-    }
+    if ((selectedInterview?.reschedule_count || 0) >= 2) { alert('Maximum 2 reschedule requests allowed.'); return; }
+    if (!selectedInterviewId || !rescheduleReason.trim()) { alert('Please provide your availability preferences and reason for rescheduling.'); return; }
     
-    if (!selectedInterviewId || !rescheduleReason.trim()) {
-      alert('Please provide your availability preferences and reason for rescheduling.');
-      return;
-    }
-
-    const { error } = await supabase
-      .from('interview_reschedule_requests')
-      .insert({
-        interview_id: selectedInterviewId,
-        requested_by: 'Candidate',
-        reason: rescheduleReason.trim(),
-        proposed_time_1: new Date().toISOString(),
-        status: 'Pending'
-      });
-
-    if (error) {
-      alert(`Error documenting request parameters: ${error.message}`);
-    } else {
-      await supabase.from('interviews').update({ 
-        status: 'Reschedule_Requested', 
-        reschedule_count: (selectedInterview?.reschedule_count || 0) + 1 
-      }).eq('id', selectedInterviewId);
-      
-      alert('Your reschedule request has been sent to HR.');
-      setRescheduleReason('');
-      setSelectedInterviewId(null);
-      fetchWorkflowContext();
+    const { error } = await supabase.from('interview_reschedule_requests').insert({ interview_id: selectedInterviewId, requested_by: 'Candidate', reason: rescheduleReason.trim(), proposed_time_1: new Date().toISOString(), status: 'Pending' });
+    
+    if (error) { alert(`Error documenting request parameters: ${error.message}`); } 
+    else {
+      await supabase.from('interviews').update({ status: 'Reschedule_Requested', reschedule_count: (selectedInterview?.reschedule_count || 0) + 1 }).eq('id', selectedInterviewId);
+      alert('Your reschedule request has been sent to HR.'); setRescheduleReason(''); setSelectedInterviewId(null); fetchWorkflowContext();
     }
   }
 
   const handleLogout = async () => {
     try {
-      localStorage.removeItem('candidateEmail');
-      localStorage.clear();
-      sessionStorage.clear();
-      
-      setCandidate(null);
-      setEmailInput('');
-      
+      localStorage.removeItem('candidateEmail'); localStorage.clear(); sessionStorage.clear();
+      setCandidate(null); setAssignment(null); setInterviews([]); setOnboardingData(null); setQuestions([]); setUploadedFiles([]); setAssignmentLink(''); setEmailInput('');
       navigate('/login', { replace: true }); 
-    } catch (err) {
-      console.error("Logout error:", err);
-      navigate('/login', { replace: true });
-    }
+    } catch (err) { navigate('/login', { replace: true }); }
   };
 
-  const openFAQModal = () => {
-    setShowFAQModal(true);
-  };
-
-  const closeFAQModal = () => {
-    setShowFAQModal(false);
-  };
+  const openFAQModal = () => setShowFAQModal(true);
+  const closeFAQModal = () => setShowFAQModal(false);
 
   const groupedFAQs = faqs.reduce((groups, faq) => {
     const category = faq.category || 'General';
-    if (!groups[category]) {
-      groups[category] = [];
-    }
-    groups[category].push(faq);
-    return groups;
+    if (!groups[category]) groups[category] = [];
+    groups[category].push(faq); return groups;
   }, {});
 
   const isLoginPath = window.location.pathname === '/login';
 
-  // ✅ Extract time from ISO string - converts UTC back to IST
   function extractTimeFromISO(isoString) {
     if (!isoString) return '';
     try {
-      const date = new Date(isoString);
-      if (isNaN(date.getTime())) return '';
-      // Add 5 hours 30 minutes to convert UTC to IST
-      const istTime = new Date(date.getTime() + (5.5 * 60 * 60 * 1000));
-      let hours = istTime.getHours();
+      const istTime = new Date(new Date(isoString).getTime() + (5.5 * 60 * 60 * 1000));
+      const hours = istTime.getHours();
       const minutes = istTime.getMinutes().toString().padStart(2, '0');
-      const ampm = hours >= 12 ? 'PM' : 'AM';
-      hours = hours % 12 || 12;
-      return `${hours}:${minutes} ${ampm}`;
-    } catch (e) {
-      console.error('Error extracting time:', e);
-      return '';
-    }
+      return `${hours % 12 || 12}:${minutes} ${hours >= 12 ? 'PM' : 'AM'}`;
+    } catch (e) { return ''; }
   }
 
-  // Display time in IST
   const getTimeSlotDisplay = (interview) => {
-    if (interview.time_slot) {
-      return interview.time_slot;
-    }
+    if (interview.time_slot) return interview.time_slot;
     if (interview.scheduled_date_time && interview.scheduled_end_time) {
-      const start = new Date(interview.scheduled_date_time);
-      const end = new Date(interview.scheduled_end_time);
-      const startStr = start.toLocaleTimeString('en-IN', { 
-        hour: '2-digit', 
-        minute: '2-digit', 
-        timeZone: 'Asia/Kolkata',
-        hour12: true 
-      });
-      const endStr = end.toLocaleTimeString('en-IN', { 
-        hour: '2-digit', 
-        minute: '2-digit', 
-        timeZone: 'Asia/Kolkata',
-        hour12: true 
-      });
+      const startStr = new Date(interview.scheduled_date_time).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata', hour12: true });
+      const endStr = new Date(interview.scheduled_end_time).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata', hour12: true });
       return `${startStr} - ${endStr}`;
     }
     return null;
   };
 
-  // Display date in IST
   const getFormattedDateIST = (dateString) => {
     if (!dateString) return '';
-    try {
-      const date = new Date(dateString);
-      if (isNaN(date.getTime())) return '';
-      return date.toLocaleDateString('en-IN', { 
-        year: 'numeric', 
-        month: 'short', 
-        day: 'numeric',
-        timeZone: 'Asia/Kolkata'
-      });
-    } catch (e) {
-      console.error('Error formatting date:', e);
-      return '';
-    }
+    try { return new Date(dateString).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'Asia/Kolkata' }); } catch (e) { return ''; }
   };
 
-  // Display time in IST using extractTimeFromISO
-  const formatTimeIST = (dateString) => {
-    if (!dateString) return '';
-    return extractTimeFromISO(dateString);
-  };
+  const formatTimeIST = (dateString) => { return extractTimeFromISO(dateString); };
 
-  const hasProbationMeeting = () => {
-    return onboardingData && 
-           onboardingData.probation_meeting_scheduled === true && 
-           onboardingData.probation_meeting_date;
-  };
+  const hasProbationMeeting = () => { return onboardingData && onboardingData.probation_meeting_scheduled === true && onboardingData.probation_meeting_date; };
 
   const getProbationMeetingDetails = () => {
     if (!onboardingData) return null;
-    return {
-      date: onboardingData.probation_meeting_date,
-      end: onboardingData.probation_meeting_end,
-      link: onboardingData.probation_meeting_link
-    };
+    return { date: onboardingData.probation_meeting_date, end: onboardingData.probation_meeting_end, link: onboardingData.probation_meeting_link };
   };
 
-  // Check if candidate is on waitlist
   const isOnWaitlist = candidate?.current_stage === 'Waitlist';
 
+  // ==========================================
+  // PREMIUM LOGIN & REGISTRATION UI
+  // ==========================================
   if (!candidate || isLoginPath) {
+    const inputStyle = { width: '100%', padding: '12px 16px', boxSizing: 'border-box', border: '1px solid var(--glass-border)', borderRadius: '8px', outline: 'none', fontSize: '14px', backgroundColor: 'rgba(255, 255, 255, 0.05)', color: '#fff', transition: 'all 0.2s', backdropFilter: 'blur(10px)', fontFamily: 'inherit' };
+    const labelStyle = { display: 'block', textAlign: 'left', fontSize: '13px', fontWeight: '500', color: '#e2e8f0', marginBottom: '6px' };
+
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f0f4f8', padding: '20px', fontFamily: 'sans-serif' }}>
-        <div style={{ background: '#fff', width: '100%', maxWidth: '560px', padding: '32px 40px', borderRadius: '16px', boxShadow: '0 10px 25px rgba(15, 23, 42, 0.08)', border: '1px solid #e2e8f0' }}>
-          <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-            <h1 style={{ color: '#1e3a8a', fontSize: '24px', fontWeight: '800', margin: '0 0 4px 0' }}>Jarurat Care Foundation</h1>
-            <p style={{ color: '#64748b', fontSize: '14px', margin: 0 }}>Candidate Portal</p>
-          </div>
-          {errorMsg && <div style={{ padding: '10px 14px', background: '#fef2f2', borderLeft: '4px solid #ef4444', color: '#991b1b', borderRadius: '6px', fontSize: '13px', marginBottom: '16px' }}>{errorMsg}</div>}
-          {!isRegistering ? (
-            <form onSubmit={handleLogin}>
-              <div style={{ marginBottom: '16px' }}>
-                <label style={{ display: 'block', textAlign: 'left', fontSize: '13px', fontWeight: '600', color: '#475569', marginBottom: '4px' }}>Registered Email</label>
-                <input 
-                  type="email" 
-                  placeholder="Enter your registered email address" 
-                  required 
-                  value={emailInput} 
-                  onChange={(e) => setEmailInput(e.target.value)} 
-                  style={{ width: '100%', padding: '10px 14px', boxSizing: 'border-box', border: '1px solid #cbd5e1', borderRadius: '6px', outline: 'none', fontSize: '14px', backgroundColor: '#fff', color: '#000', transition: 'border-color 0.2s' }}
-                  onFocus={(e) => e.target.style.borderColor = '#2563eb'}
-                  onBlur={(e) => e.target.style.borderColor = '#cbd5e1'}
-                />
+      <>
+        <div className="aurora-bg"></div>
+        <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', position: 'relative', zIndex: 1 }}>
+          <div className="glass-panel animate-fade-up" style={{ width: '100%', maxWidth: isRegistering ? '700px' : '440px', padding: '40px' }}>
+            
+            <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+              <img src="/jarurat-logo.png" alt="Jarurat Care Foundation" style={{ height: '60px', objectFit: 'contain', marginBottom: '16px' }} />
+              <h1 style={{ color: '#fff', fontSize: '24px', fontWeight: '800', margin: '0 0 8px 0', letterSpacing: '-0.5px' }}>Candidate Portal</h1>
+              <p style={{ color: 'var(--text-muted)', fontSize: '14px', margin: 0, lineHeight: '1.5' }}>{isRegistering ? "Join our mission to transform cancer care." : "Welcome back. Log in to track your application."}</p>
+            </div>
+
+            {errorMsg && (
+              <div style={{ padding: '12px 16px', background: 'rgba(239, 68, 68, 0.1)', borderLeft: '4px solid #ef4444', color: '#fca5a5', borderRadius: '8px', fontSize: '13px', marginBottom: '20px' }}>
+                {errorMsg}
               </div>
-              <button type="submit" style={{ width: '100%', background: '#1e40af', color: '#fff', padding: '12px', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '14px', fontWeight: '600' }}>Login</button>
-              <p style={{ textAlign: 'center', marginTop: '16px', fontSize: '13px', color: '#64748b' }}>New Applicant? <span onClick={() => setIsRegistering(true)} style={{ color: '#2563eb', cursor: 'pointer', fontWeight: '600' }}>Register here</span></p>
-            </form>
-          ) : (
-            <form onSubmit={handleRegister}>
-              {/* SECTION 1: Personal Information */}
-              <div style={{ marginBottom: '16px' }}>
-                <h3 style={{ fontSize: '13px', fontWeight: '700', color: '#1e3a8a', margin: '0 0 12px 0', borderBottom: '2px solid #e2e8f0', paddingBottom: '6px' }}>👤 Personal Information</h3>
-                
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 14px' }}>
-                  <div style={{ marginBottom: '10px' }}>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '3px' }}>Full Name <span style={{ color: '#ef4444' }}>*</span></label>
-                    <input 
-                      type="text" 
-                      placeholder="Enter your full name" 
-                      value={regForm.name} 
-                      onChange={(e) => setRegForm({...regForm, name: e.target.value})} 
-                      style={{ width: '100%', padding: '8px 12px', boxSizing: 'border-box', border: formErrors.name ? '1px solid #ef4444' : '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13px', backgroundColor: '#f8fafc', color: '#1e293b' }}
-                      onFocus={(e) => e.target.style.borderColor = '#2563eb'}
-                      onBlur={(e) => e.target.style.borderColor = '#cbd5e1'}
-                    />
-                    {formErrors.name && <span style={{ fontSize: '11px', color: '#ef4444' }}>{formErrors.name}</span>}
-                  </div>
-                  
-                  <div style={{ marginBottom: '10px' }}>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '3px' }}>Email ID <span style={{ color: '#ef4444' }}>*</span></label>
-                    <input 
-                      type="email" 
-                      placeholder="Enter your email" 
-                      value={emailInput} 
-                      onChange={(e) => setEmailInput(e.target.value)} 
-                      style={{ width: '100%', padding: '8px 12px', boxSizing: 'border-box', border: formErrors.email ? '1px solid #ef4444' : '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13px', backgroundColor: '#f8fafc', color: '#1e293b' }}
-                      onFocus={(e) => e.target.style.borderColor = '#2563eb'}
-                      onBlur={(e) => e.target.style.borderColor = '#cbd5e1'}
-                    />
-                    {formErrors.email && <span style={{ fontSize: '11px', color: '#ef4444' }}>{formErrors.email}</span>}
-                  </div>
+            )}
+
+            {!isRegistering ? (
+              <form onSubmit={handleLogin} className="animate-fade-up delay-100">
+                <div style={{ marginBottom: '24px' }}>
+                  <label style={labelStyle}>Registered Email</label>
+                  <input type="email" placeholder="name@example.com" required value={emailInput} onChange={(e) => setEmailInput(e.target.value)} style={inputStyle} onFocus={(e) => { e.target.style.borderColor = 'var(--primary)'; e.target.style.boxShadow = '0 0 0 3px rgba(59,130,246,0.2)'; }} onBlur={(e) => { e.target.style.borderColor = 'var(--glass-border)'; e.target.style.boxShadow = 'none'; }} />
                 </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 14px' }}>
-                  <div style={{ marginBottom: '10px' }}>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '3px' }}>Contact Number <span style={{ color: '#ef4444' }}>*</span></label>
-                    <input 
-                      type="text" 
-                      placeholder="Enter contact number" 
-                      value={regForm.phone} 
-                      onChange={(e) => setRegForm({...regForm, phone: e.target.value})} 
-                      style={{ width: '100%', padding: '8px 12px', boxSizing: 'border-box', border: formErrors.phone ? '1px solid #ef4444' : '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13px', backgroundColor: '#f8fafc', color: '#1e293b' }}
-                      onFocus={(e) => e.target.style.borderColor = '#2563eb'}
-                      onBlur={(e) => e.target.style.borderColor = '#cbd5e1'}
-                    />
-                    {formErrors.phone && <span style={{ fontSize: '11px', color: '#ef4444' }}>{formErrors.phone}</span>}
-                  </div>
-                  
-                  <div style={{ marginBottom: '10px' }}>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '3px' }}>Domain <span style={{ color: '#ef4444' }}>*</span></label>
-                    <select 
-                      value={regForm.domain} 
-                      onChange={(e) => setRegForm({...regForm, domain: e.target.value})} 
-                      style={{ width: '100%', padding: '8px 12px', border: formErrors.domain ? '1px solid #ef4444' : '1px solid #cbd5e1', borderRadius: '6px', backgroundColor: '#f8fafc', fontSize: '13px', color: '#1e293b' }}
-                    >
-                      <option value="">Select domain</option>
-                      {domains.length > 0 ? domains.map(d => <option key={d} value={d}>{d}</option>) : (
-                        <>
-                          <option value="Automation & Operations">Automation & Operations</option>
-                          <option value="Brand Management & Outreach">Brand Management & Outreach</option>
-                          <option value="Business Development">Business Development</option>
-                          <option value="Clinical Psychologist">Clinical Psychologist</option>
-                          <option value="Content Creation">Content Creation</option>
-                          <option value="Creative Design">Creative Design</option>
-                          <option value="Graphic Design">Graphic Design</option>
-                          <option value="HR Psychologist">HR Psychologist</option>
-                          <option value="Human Resources (HR)">Human Resources (HR)</option>
-                          <option value="Lead Generation">Lead Generation</option>
-                          <option value="Marketing">Marketing</option>
-                          <option value="Media & Public Relations (PR)">Media & Public Relations (PR)</option>
-                          <option value="Motion Graphics">Motion Graphics</option>
-                          <option value="Operations">Operations</option>
-                          <option value="Project Management">Project Management</option>
-                          <option value="Python Automation">Python Automation</option>
-                          <option value="Sales and Marketing">Sales and Marketing</option>
-                          <option value="Social Media Management">Social Media Management</option>
-                          <option value="Talent Acquisition">Talent Acquisition</option>
-                          <option value="Video Editing/Making">Video Editing/Making</option>
-                          <option value="UI/UX Design">UI/UX Design</option>
-                          <option value="Full stack Developer">Full stack Developer</option>
-                        </>
-                      )}
-                    </select>
-                    {formErrors.domain && <span style={{ fontSize: '11px', color: '#ef4444' }}>{formErrors.domain}</span>}
-                  </div>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 14px' }}>
-                  <div style={{ marginBottom: '10px' }}>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '3px' }}>Source <span style={{ color: '#ef4444' }}>*</span></label>
-                    <select 
-                      value={regForm.source} 
-                      onChange={(e) => {
-                        setRegForm({...regForm, source: e.target.value});
-                        if (e.target.value !== 'Referral' && e.target.value !== 'Other') {
-                          setRegForm(prev => ({...prev, source: e.target.value, referrer_contact: '', referrer_name: '', other_source: ''}));
-                        }
-                      }} 
-                      style={{ width: '100%', padding: '8px 12px', border: formErrors.source ? '1px solid #ef4444' : '1px solid #cbd5e1', borderRadius: '6px', backgroundColor: '#f8fafc', fontSize: '13px', color: '#1e293b' }}
-                    >
-                      <option value="">Select source</option>
-                      <option value="Internshala">Internshala</option>
-                      <option value="Referral">Referral</option>
-                      <option value="Wellfound">Wellfound</option>
-                      <option value="Indeed">Indeed</option>
-                      <option value="College Outreach">College Outreach</option>
-                      <option value="Social Media">Social Media</option>
-                      <option value="Other">Other</option>
-                    </select>
-                    {formErrors.source && <span style={{ fontSize: '11px', color: '#ef4444' }}>{formErrors.source}</span>}
-                  </div>
-
-                  {/* Other Source Input */}
-                  {regForm.source === 'Other' && (
-                    <div style={{ marginBottom: '10px' }}>
-                      <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '3px' }}>Specify Source <span style={{ color: '#ef4444' }}>*</span></label>
-                      <input 
-                        type="text" 
-                        placeholder="Enter your source" 
-                        value={regForm.other_source} 
-                        onChange={(e) => setRegForm({...regForm, other_source: e.target.value})} 
-                        style={{ width: '100%', padding: '8px 12px', boxSizing: 'border-box', border: formErrors.other_source ? '1px solid #ef4444' : '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13px', backgroundColor: '#f8fafc', color: '#1e293b' }}
-                      />
-                      {formErrors.other_source && <span style={{ fontSize: '11px', color: '#ef4444' }}>{formErrors.other_source}</span>}
+                <button type="submit" className="btn-premium" style={{ width: '100%' }}>Continue to Portal</button>
+                <p style={{ textAlign: 'center', marginTop: '24px', fontSize: '14px', color: 'var(--text-muted)' }}>New Applicant? <span onClick={() => setIsRegistering(true)} style={{ color: '#60a5fa', cursor: 'pointer', fontWeight: '600', transition: 'color 0.2s' }}>Register here</span></p>
+              </form>
+            ) : (
+              <form onSubmit={handleRegister} className="animate-fade-up delay-100">
+                <div style={{ marginBottom: '24px' }}>
+                  <h3 style={{ fontSize: '14px', fontWeight: '700', color: '#60a5fa', margin: '0 0 16px 0', borderBottom: '1px solid var(--glass-border)', paddingBottom: '8px', textTransform: 'uppercase', letterSpacing: '1px' }}>Personal Information</h3>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                    <div><label style={labelStyle}>Full Name <span style={{ color: '#ef4444' }}>*</span></label><input type="text" placeholder="John Doe" value={regForm.name} onChange={(e) => setRegForm({...regForm, name: e.target.value})} style={{...inputStyle, border: formErrors.name ? '1px solid #ef4444' : inputStyle.border}} />{formErrors.name && <span className="field-error" style={{ fontSize: '11px', color: '#fca5a5', marginTop: '4px', display: 'block' }}>{formErrors.name}</span>}</div>
+                    <div><label style={labelStyle}>Email Address <span style={{ color: '#ef4444' }}>*</span></label><input type="email" placeholder="john@example.com" value={emailInput} onChange={(e) => setEmailInput(e.target.value)} style={{...inputStyle, border: formErrors.email ? '1px solid #ef4444' : inputStyle.border}} />{formErrors.email && <span className="field-error" style={{ fontSize: '11px', color: '#fca5a5', marginTop: '4px', display: 'block' }}>{formErrors.email}</span>}</div>
+                    <div><label style={labelStyle}>Contact Number <span style={{ color: '#ef4444' }}>*</span></label><input type="text" placeholder="+91 XXXXX XXXXX" value={regForm.phone} onChange={(e) => setRegForm({...regForm, phone: e.target.value})} style={{...inputStyle, border: formErrors.phone ? '1px solid #ef4444' : inputStyle.border}} />{formErrors.phone && <span className="field-error" style={{ fontSize: '11px', color: '#fca5a5', marginTop: '4px', display: 'block' }}>{formErrors.phone}</span>}</div>
+                    <div>
+                      <label style={labelStyle}>Domain <span style={{ color: '#ef4444' }}>*</span></label>
+                      <select value={regForm.domain} onChange={(e) => setRegForm({...regForm, domain: e.target.value})} style={{...inputStyle, border: formErrors.domain ? '1px solid #ef4444' : inputStyle.border, color: '#000'}}>
+                        <option value="">Select domain...</option>
+                        {domains.length > 0 ? domains.map(d => <option key={d} value={d}>{d}</option>) : <><option value="Human Resources (HR)">Human Resources (HR)</option><option value="Marketing">Marketing</option><option value="UI/UX Design">UI/UX Design</option></>}
+                      </select>
+                      {formErrors.domain && <span className="field-error" style={{ fontSize: '11px', color: '#fca5a5', marginTop: '4px', display: 'block' }}>{formErrors.domain}</span>}
                     </div>
-                  )}
-                </div>
-              </div>
-
-              {/* SECTION 2: Education */}
-              <div style={{ marginBottom: '16px' }}>
-                <h3 style={{ fontSize: '13px', fontWeight: '700', color: '#1e3a8a', margin: '0 0 12px 0', borderBottom: '2px solid #e2e8f0', paddingBottom: '6px' }}>🎓 Education Details</h3>
-                
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 14px' }}>
-                  <div style={{ marginBottom: '10px' }}>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '3px' }}>College/University <span style={{ color: '#ef4444' }}>*</span></label>
-                    <input 
-                      type="text" 
-                      placeholder="College name" 
-                      value={regForm.college_name} 
-                      onChange={(e) => setRegForm({...regForm, college_name: e.target.value})} 
-                      style={{ width: '100%', padding: '8px 12px', boxSizing: 'border-box', border: formErrors.college_name ? '1px solid #ef4444' : '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13px', backgroundColor: '#f8fafc', color: '#1e293b' }}
-                    />
-                    {formErrors.college_name && <span style={{ fontSize: '11px', color: '#ef4444' }}>{formErrors.college_name}</span>}
-                  </div>
-                  
-                  <div style={{ marginBottom: '10px' }}>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '3px' }}>Degree/Course <span style={{ color: '#ef4444' }}>*</span></label>
-                    <input 
-                      type="text" 
-                      placeholder="e.g., B.Tech, MBA" 
-                      value={regForm.degree_course} 
-                      onChange={(e) => setRegForm({...regForm, degree_course: e.target.value})} 
-                      style={{ width: '100%', padding: '8px 12px', boxSizing: 'border-box', border: formErrors.degree_course ? '1px solid #ef4444' : '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13px', backgroundColor: '#f8fafc', color: '#1e293b' }}
-                    />
-                    {formErrors.degree_course && <span style={{ fontSize: '11px', color: '#ef4444' }}>{formErrors.degree_course}</span>}
-                  </div>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 14px' }}>
-                  <div style={{ marginBottom: '10px' }}>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '3px' }}>Graduation Year <span style={{ color: '#ef4444' }}>*</span></label>
-                    <input 
-                      type="number" 
-                      placeholder="e.g., 2024" 
-                      value={regForm.graduation_year} 
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        if (value === '') {
-                          setRegForm({...regForm, graduation_year: ''});
-                        } else {
-                          const num = parseInt(value);
-                          if (num >= 2000) {
-                            setRegForm({...regForm, graduation_year: value});
-                          }
-                        }
-                      }} 
-                      min="2000"
-                      style={{ width: '100%', padding: '8px 12px', boxSizing: 'border-box', border: formErrors.graduation_year ? '1px solid #ef4444' : '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13px', backgroundColor: '#f8fafc', color: '#1e293b' }}
-                    />
-                    {formErrors.graduation_year && <span style={{ fontSize: '11px', color: '#ef4444' }}>{formErrors.graduation_year}</span>}
-                  </div>
-                  
-                  <div style={{ marginBottom: '10px' }}>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '3px' }}>Address <span style={{ color: '#ef4444' }}>*</span></label>
-                    <input 
-                      type="text" 
-                      placeholder="Address (include pincode)" 
-                      value={regForm.address} 
-                      onChange={(e) => setRegForm({...regForm, address: e.target.value})} 
-                      style={{ width: '100%', padding: '8px 12px', boxSizing: 'border-box', border: formErrors.address ? '1px solid #ef4444' : '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13px', backgroundColor: '#f8fafc', color: '#1e293b' }}
-                    />
-                    {formErrors.address && <span style={{ fontSize: '11px', color: '#ef4444' }}>{formErrors.address}</span>}
-                  </div>
-                </div>
-              </div>
-
-              {/* SECTION 3: Resume & Links */}
-              <div style={{ marginBottom: '16px' }}>
-                <h3 style={{ fontSize: '13px', fontWeight: '700', color: '#1e3a8a', margin: '0 0 12px 0', borderBottom: '2px solid #e2e8f0', paddingBottom: '6px' }}>📄 Resume & Links</h3>
-                
-                <div style={{ marginBottom: '10px' }}>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '3px' }}>Resume (PDF only, max 100MB) <span style={{ color: '#ef4444' }}>*</span></label>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                    <label style={{
-                      display: 'inline-block',
-                      padding: '6px 14px',
-                      background: '#2563eb',
-                      color: '#fff',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                      fontSize: '13px',
-                      fontWeight: '500',
-                      border: 'none'
-                    }}>
-                      Choose File
-                      <input 
-                        type="file" 
-                        accept=".pdf,application/pdf" 
-                        onChange={(e) => {
-                          if (e.target.files.length > 0 && validateFile(e.target.files[0])) {
-                            setResumeFile(e.target.files[0]);
-                            setFormErrors({...formErrors, resume: ''});
-                          }
-                          e.target.value = '';
-                        }} 
-                        style={{ display: 'none' }} 
-                      />
-                    </label>
-                    {resumeFile ? (
-                      <span style={{ fontSize: '13px', color: '#059669', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <span>📄 {resumeFile.name} ({(resumeFile.size / 1024 / 1024).toFixed(2)} MB)</span>
-                        <button 
-                          type="button"
-                          onClick={() => setResumeFile(null)}
-                          style={{
-                            padding: '1px 8px',
-                            background: '#fee2e2',
-                            color: '#dc2626',
-                            border: 'none',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                            fontSize: '11px'
-                          }}
-                        >
-                          Remove
-                        </button>
-                      </span>
-                    ) : (
-                      <span style={{ fontSize: '13px', color: '#94a3b8' }}>No file chosen</span>
+                    <div>
+                      <label style={labelStyle}>Source <span style={{ color: '#ef4444' }}>*</span></label>
+                      <select value={regForm.source} onChange={(e) => { setRegForm({...regForm, source: e.target.value}); if (e.target.value !== 'Referral' && e.target.value !== 'Other') { setRegForm(prev => ({...prev, source: e.target.value, referrer_contact: '', referrer_name: '', other_source: ''})); } }} style={{...inputStyle, border: formErrors.source ? '1px solid #ef4444' : inputStyle.border, color: '#000'}}>
+                        <option value="">Select source...</option><option value="Internshala">Internshala</option><option value="Referral">Referral</option><option value="LinkedIn">LinkedIn</option><option value="Other">Other</option>
+                      </select>
+                      {formErrors.source && <span className="field-error" style={{ fontSize: '11px', color: '#fca5a5', marginTop: '4px', display: 'block' }}>{formErrors.source}</span>}
+                    </div>
+                    {regForm.source === 'Other' && (
+                      <div><label style={labelStyle}>Specify Source <span style={{ color: '#ef4444' }}>*</span></label><input type="text" placeholder="Where did you hear about us?" value={regForm.other_source} onChange={(e) => setRegForm({...regForm, other_source: e.target.value})} style={{...inputStyle, border: formErrors.other_source ? '1px solid #ef4444' : inputStyle.border}} />{formErrors.other_source && <span className="field-error" style={{ fontSize: '11px', color: '#fca5a5', marginTop: '4px', display: 'block' }}>{formErrors.other_source}</span>}</div>
                     )}
                   </div>
-                  {formErrors.resume && <span style={{ fontSize: '11px', color: '#ef4444' }}>{formErrors.resume}</span>}
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 14px' }}>
-                  <div style={{ marginBottom: '10px' }}>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '3px' }}>LinkedIn Profile</label>
-                    <input 
-                      type="url" 
-                      placeholder="linkedin.com/in/yourprofile" 
-                      value={regForm.linkedin_profile} 
-                      onChange={(e) => setRegForm({...regForm, linkedin_profile: e.target.value})} 
-                      style={{ width: '100%', padding: '8px 12px', boxSizing: 'border-box', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13px', backgroundColor: '#f8fafc', color: '#1e293b' }}
-                    />
-                  </div>
-                  
-                  <div style={{ marginBottom: '10px' }}>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '3px' }}>Portfolio Link</label>
-                    <input 
-                      type="url" 
-                      placeholder="Your portfolio URL" 
-                      value={regForm.portfolio_link} 
-                      onChange={(e) => setRegForm({...regForm, portfolio_link: e.target.value})} 
-                      style={{ width: '100%', padding: '8px 12px', boxSizing: 'border-box', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13px', backgroundColor: '#f8fafc', color: '#1e293b' }}
-                    />
+                <div style={{ marginBottom: '24px' }}>
+                  <h3 style={{ fontSize: '14px', fontWeight: '700', color: '#60a5fa', margin: '0 0 16px 0', borderBottom: '1px solid var(--glass-border)', paddingBottom: '8px', textTransform: 'uppercase', letterSpacing: '1px' }}>Education</h3>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                    <div><label style={labelStyle}>College/University <span style={{ color: '#ef4444' }}>*</span></label><input type="text" placeholder="e.g., IIT Bombay" value={regForm.college_name} onChange={(e) => setRegForm({...regForm, college_name: e.target.value})} style={{...inputStyle, border: formErrors.college_name ? '1px solid #ef4444' : inputStyle.border}} />{formErrors.college_name && <span className="field-error" style={{ fontSize: '11px', color: '#fca5a5', marginTop: '4px', display: 'block' }}>{formErrors.college_name}</span>}</div>
+                    <div><label style={labelStyle}>Degree/Course <span style={{ color: '#ef4444' }}>*</span></label><input type="text" placeholder="e.g., B.Tech, MBA" value={regForm.degree_course} onChange={(e) => setRegForm({...regForm, degree_course: e.target.value})} style={{...inputStyle, border: formErrors.degree_course ? '1px solid #ef4444' : inputStyle.border}} />{formErrors.degree_course && <span className="field-error" style={{ fontSize: '11px', color: '#fca5a5', marginTop: '4px', display: 'block' }}>{formErrors.degree_course}</span>}</div>
+                    <div><label style={labelStyle}>Graduation Year <span style={{ color: '#ef4444' }}>*</span></label><input type="number" placeholder="e.g., 2024" min="2000" value={regForm.graduation_year} onChange={(e) => setRegForm({...regForm, graduation_year: e.target.value})} style={{...inputStyle, border: formErrors.graduation_year ? '1px solid #ef4444' : inputStyle.border}} />{formErrors.graduation_year && <span className="field-error" style={{ fontSize: '11px', color: '#fca5a5', marginTop: '4px', display: 'block' }}>{formErrors.graduation_year}</span>}</div>
+                    <div><label style={labelStyle}>City/Address <span style={{ color: '#ef4444' }}>*</span></label><input type="text" placeholder="Current city & pincode" value={regForm.address} onChange={(e) => setRegForm({...regForm, address: e.target.value})} style={{...inputStyle, border: formErrors.address ? '1px solid #ef4444' : inputStyle.border}} />{formErrors.address && <span className="field-error" style={{ fontSize: '11px', color: '#fca5a5', marginTop: '4px', display: 'block' }}>{formErrors.address}</span>}</div>
                   </div>
                 </div>
-              </div>
 
-              {/* Referral Details (conditional) */}
-              {regForm.source === 'Referral' && (
-                <div style={{ marginBottom: '16px', background: '#f0fdf4', padding: '12px 14px', borderRadius: '6px', border: '1px solid #bbf7d0' }}>
-                  <h4 style={{ fontSize: '12px', fontWeight: '700', color: '#065f46', margin: '0 0 8px 0' }}>Referral Details</h4>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 12px' }}>
-                    <div style={{ marginBottom: '6px' }}>
-                      <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', color: '#475569', marginBottom: '2px' }}>Referrer's Name <span style={{ color: '#ef4444' }}>*</span></label>
-                      <input 
-                        type="text" 
-                        placeholder="Referrer name" 
-                        value={regForm.referrer_name} 
-                        onChange={(e) => setRegForm({...regForm, referrer_name: e.target.value})} 
-                        style={{ width: '100%', padding: '6px 10px', boxSizing: 'border-box', border: formErrors.referrer_name ? '1px solid #ef4444' : '1px solid #cbd5e1', borderRadius: '4px', fontSize: '13px', backgroundColor: '#fff', color: '#1e293b' }}
-                      />
-                      {formErrors.referrer_name && <span style={{ fontSize: '10px', color: '#ef4444' }}>{formErrors.referrer_name}</span>}
+                <div style={{ marginBottom: '32px' }}>
+                  <h3 style={{ fontSize: '14px', fontWeight: '700', color: '#60a5fa', margin: '0 0 16px 0', borderBottom: '1px solid var(--glass-border)', paddingBottom: '8px', textTransform: 'uppercase', letterSpacing: '1px' }}>Profile Links</h3>
+                  <div style={{ marginBottom: '16px' }}>
+                    <label style={labelStyle}>Upload Resume (PDF, Max 100MB) <span style={{ color: '#ef4444' }}>*</span></label>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                      <label className="btn-glass" style={{ padding: '8px 16px', fontSize: '14px', display: 'inline-block' }}>Choose File<input type="file" accept=".pdf,application/pdf" style={{ display: 'none' }} onChange={(e) => { if (e.target.files.length > 0 && validateFile(e.target.files[0])) { setResumeFile(e.target.files[0]); setFormErrors({...formErrors, resume: ''}); } e.target.value = ''; }} /></label>
+                      {resumeFile ? (<div style={{ color: '#4ade80', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '10px' }}><span>📄 {resumeFile.name}</span><span onClick={() => setResumeFile(null)} style={{ color: '#fca5a5', cursor: 'pointer', fontSize: '12px' }}>Remove</span></div>) : (<span style={{ color: 'var(--text-muted)', fontSize: '13px' }}>No file selected</span>)}
                     </div>
-                    <div style={{ marginBottom: '6px' }}>
-                      <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', color: '#475569', marginBottom: '2px' }}>Referrer's Contact <span style={{ color: '#ef4444' }}>*</span></label>
-                      <input 
-                        type="text" 
-                        placeholder="Referrer contact" 
-                        value={regForm.referrer_contact} 
-                        onChange={(e) => setRegForm({...regForm, referrer_contact: e.target.value})} 
-                        style={{ width: '100%', padding: '6px 10px', boxSizing: 'border-box', border: formErrors.referrer_contact ? '1px solid #ef4444' : '1px solid #cbd5e1', borderRadius: '4px', fontSize: '13px', backgroundColor: '#fff', color: '#1e293b' }}
-                      />
-                      {formErrors.referrer_contact && <span style={{ fontSize: '10px', color: '#ef4444' }}>{formErrors.referrer_contact}</span>}
+                    {formErrors.resume && <span className="field-error" style={{ fontSize: '11px', color: '#fca5a5', marginTop: '4px', display: 'block' }}>{formErrors.resume}</span>}
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                    <div><label style={labelStyle}>LinkedIn URL</label><input type="url" placeholder="https://linkedin.com/in/..." value={regForm.linkedin_profile} onChange={(e) => setRegForm({...regForm, linkedin_profile: e.target.value})} style={inputStyle} /></div>
+                    <div><label style={labelStyle}>Portfolio / GitHub URL</label><input type="url" placeholder="https://..." value={regForm.portfolio_link} onChange={(e) => setRegForm({...regForm, portfolio_link: e.target.value})} style={inputStyle} /></div>
+                  </div>
+                </div>
+
+                {regForm.source === 'Referral' && (
+                  <div style={{ background: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.2)', padding: '16px', borderRadius: '8px', marginBottom: '24px' }}>
+                    <h4 style={{ color: '#60a5fa', margin: '0 0 12px 0', fontSize: '13px', textTransform: 'uppercase' }}>Referrer Details</h4>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                      <div><label style={labelStyle}>Name <span style={{ color: '#ef4444' }}>*</span></label><input type="text" value={regForm.referrer_name} onChange={(e) => setRegForm({...regForm, referrer_name: e.target.value})} style={inputStyle} />{formErrors.referrer_name && <span className="field-error" style={{ fontSize: '11px', color: '#fca5a5', marginTop: '4px', display: 'block' }}>{formErrors.referrer_name}</span>}</div>
+                      <div><label style={labelStyle}>Contact <span style={{ color: '#ef4444' }}>*</span></label><input type="text" value={regForm.referrer_contact} onChange={(e) => setRegForm({...regForm, referrer_contact: e.target.value})} style={inputStyle} />{formErrors.referrer_contact && <span className="field-error" style={{ fontSize: '11px', color: '#fca5a5', marginTop: '4px', display: 'block' }}>{formErrors.referrer_contact}</span>}</div>
                     </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              {uploading && (
-                <p style={{ fontSize: '12px', color: '#64748b', textAlign: 'center' }}>⏳ Uploading...</p>
-              )}
-
-              <button 
-                type="submit" 
-                disabled={uploading}
-                style={{ 
-                  width: '100%', 
-                  background: uploading ? '#94a3b8' : '#059669', 
-                  color: '#fff', 
-                  padding: '12px', 
-                  border: 'none', 
-                  borderRadius: '6px', 
-                  fontSize: '14px', 
-                  fontWeight: '600', 
-                  cursor: uploading ? 'not-allowed' : 'pointer' 
-                }}
-                onMouseEnter={(e) => !uploading && (e.target.style.background = '#047857')}
-                onMouseLeave={(e) => !uploading && (e.target.style.background = '#059669')}
-              >
-                {uploading ? 'Uploading...' : 'Register'}
-              </button>
-              <p style={{ textAlign: 'center', marginTop: '12px', fontSize: '13px', color: '#64748b' }}>Already registered? <span onClick={() => setIsRegistering(false)} style={{ color: '#2563eb', cursor: 'pointer', fontWeight: '600' }}>Return to Login</span></p>
-            </form>
-          )}
+                <button type="submit" disabled={uploading} className="btn-premium" style={{ width: '100%', opacity: uploading ? 0.7 : 1, cursor: uploading ? 'not-allowed' : 'pointer' }}>{uploading ? 'Processing Application...' : 'Submit Application'}</button>
+                <p style={{ textAlign: 'center', marginTop: '24px', fontSize: '14px', color: 'var(--text-muted)' }}>Already registered? <span onClick={() => setIsRegistering(false)} style={{ color: '#60a5fa', cursor: 'pointer', fontWeight: '600' }}>Return to Login</span></p>
+              </form>
+            )}
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 
-  // 5-STEP PROGRESS LOGIC
+  // ==========================================
+  // DASHBOARD UI (Restored Logic)
+  // ==========================================
   const stageMapping = [
     { id: 'Applied', label: 'APPLICATION\nSUBMITTED' },
     { id: 'Assignment', label: 'ASSIGNMENT\nPIPELINE' },
@@ -1441,16 +603,13 @@ export default function CandidatePortalPage() {
     { id: 'Probation', label: 'PROBATION\nACTIVE' },
     { id: 'Onboarding Done', label: 'ONBOARDING\nCOMPLETE' }
   ];
-
+  
   let currentStepIndex = 0;
-
   if (candidate.current_stage === 'Waitlist') {
     const restoreStage = candidate.waitlist_restore_stage || 'Applied';
     const foundIndex = stageMapping.findIndex(s => s.id === restoreStage);
     currentStepIndex = foundIndex !== -1 ? foundIndex : 0;
-  } else if (candidate.current_stage === 'Selected' || candidate.current_stage === 'Rejected' || 
-      candidate.current_stage === 'Internship Discontinued' || candidate.current_stage === 'Withdrawn' ||
-      candidate.current_stage === 'Terminated') {
+  } else if (['Selected', 'Rejected', 'Internship Discontinued', 'Withdrawn', 'Terminated'].includes(candidate.current_stage)) {
     currentStepIndex = 3; 
   } else {
     const foundIndex = stageMapping.findIndex(s => s.id === candidate.current_stage);
@@ -1458,24 +617,11 @@ export default function CandidatePortalPage() {
   }
 
   const isSubmissionCompleted = assignment?.assignment_status === 'Submitted' || assignment?.assignment_status === 'Evaluated';
-
-  const getAssignmentTitle = () => {
-    if (!candidate) return 'Assignment';
-    return `${candidate.domain} Assignment`;
-  };
-
+  const getAssignmentTitle = () => { if (!candidate) return 'Assignment'; return `${candidate.domain} Assignment`; };
   const formatTime = (milliseconds) => {
-    if (milliseconds === null) return 'Calculating...';
-    if (milliseconds <= 0) return 'EXPIRED';
-
-    const totalSeconds = Math.floor(milliseconds / 1000);
-    const days = Math.floor(totalSeconds / 86400);
-    const hours = Math.floor((totalSeconds % 86400) / 3600);
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
-    const seconds = totalSeconds % 60;
-
-    if (days > 0) return `${days}d ${hours}h ${minutes}m ${seconds}s`;
-    return `${hours}h ${minutes}m ${seconds}s`;
+    if (milliseconds === null) return 'Calculating...'; if (milliseconds <= 0) return 'EXPIRED';
+    const totalSeconds = Math.floor(milliseconds / 1000); const days = Math.floor(totalSeconds / 86400); const hours = Math.floor((totalSeconds % 86400) / 3600); const minutes = Math.floor((totalSeconds % 3600) / 60); const seconds = totalSeconds % 60;
+    if (days > 0) return `${days}d ${hours}h ${minutes}m ${seconds}s`; return `${hours}h ${minutes}m ${seconds}s`;
   };
 
   const hasClearedR1 = candidate.r1_status === 'Passed' || candidate.r1_status === 'Selected';
@@ -1484,1347 +630,403 @@ export default function CandidatePortalPage() {
 
   const isAssignmentLate = () => {
     if (!assignment || !assignment.deadline) return false;
-    if (assignment.assignment_status === 'Submitted' && assignment.submitted_at) {
-      const deadline = new Date(assignment.deadline).getTime();
-      const submittedAt = new Date(assignment.submitted_at).getTime();
-      return submittedAt > deadline;
-    }
+    if (assignment.assignment_status === 'Submitted' && assignment.submitted_at) { return new Date(assignment.submitted_at).getTime() > new Date(assignment.deadline).getTime(); }
     return false;
   };
 
   const getLateDuration = () => {
     if (!assignment || !assignment.deadline || !assignment.submitted_at) return null;
-    const deadline = new Date(assignment.deadline).getTime();
-    const submittedAt = new Date(assignment.submitted_at).getTime();
+    const deadline = new Date(assignment.deadline).getTime(); const submittedAt = new Date(assignment.submitted_at).getTime();
     if (submittedAt <= deadline) return null;
-    const lateMs = submittedAt - deadline;
-    const lateHours = Math.floor(lateMs / (1000 * 60 * 60));
-    const lateMinutes = Math.floor((lateMs % (1000 * 60 * 60)) / (1000 * 60));
-    return `${lateHours}h ${lateMinutes}m`;
+    const lateMs = submittedAt - deadline; return `${Math.floor(lateMs / (1000 * 60 * 60))}h ${Math.floor((lateMs % (1000 * 60 * 60)) / (1000 * 60))}m`;
   };
 
   const probationMeeting = hasProbationMeeting() ? getProbationMeetingDetails() : null;
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f1f5f9', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
-      <header style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%)', padding: '16px 40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <img 
-            src="/jarurat-logo.png" 
-            alt="Jarurat Care Logo" 
-            style={{ height: '55px', objectFit: 'contain' }} 
-          />
-          <span style={{ color: '#fff', fontSize: '18px', fontWeight: '800', letterSpacing: '-0.5px' }}>Jarurat Care Foundation <span style={{ fontWeight: '300', opacity: '0.8' }}>| CANDIDATE PORTAL</span></span>
-        </div>
-        <button type="button" onClick={handleLogout} style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', padding: '8px 18px', color: '#fff', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '13px' }}>LOGOUT</button>
-      </header>
-
-      <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '40px 20px' }}>
-        {/* Waitlist Banner */}
-        {isOnWaitlist && (
-          <div style={{ 
-            background: '#f5f3ff', 
-            border: '2px solid #8b5cf6', 
-            borderRadius: '12px', 
-            padding: '24px', 
-            marginBottom: '30px',
-            textAlign: 'center'
-          }}>
-            <span style={{ fontSize: '48px', display: 'block', marginBottom: '12px' }}>⏳</span>
-            <h3 style={{ color: '#5b21b6', margin: '0 0 8px 0', fontSize: '22px' }}>You're on our Waitlist</h3>
-            <p style={{ color: '#6d28d9', fontSize: '15px', maxWidth: '600px', margin: '0 auto', lineHeight: '1.6' }}>
-              Thank you for your interest in joining Jarurat Care Foundation. 
-              While we don't have an opening that matches your profile right now, 
-              we've placed your application on our waitlist. 
-              We'll reach out to you when a suitable position becomes available.
-            </p>
-            {candidate.waitlisted_at && (
-              <p style={{ fontSize: '12px', color: '#a78bfa', marginTop: '8px' }}>
-                Waitlisted on: {formatIST(candidate.waitlisted_at)}
-              </p>
-            )}
+    <>
+      <div className="aurora-bg" style={{ opacity: 0.3 }}></div>
+      <div style={{ minHeight: '100vh', fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif", position: 'relative', zIndex: 1 }}>
+        <header className="glass-panel" style={{ borderRadius: 0, padding: '16px 40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--glass-border)', position: 'sticky', top: 0, zIndex: 100 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <img src="/jarurat-logo.png" alt="Logo" style={{ height: '40px', objectFit: 'contain' }} />
+            <span style={{ color: '#fff', fontSize: '18px', fontWeight: '700', letterSpacing: '-0.5px' }}>Jarurat Care <span style={{ fontWeight: '400', color: 'var(--text-muted)' }}>| Candidate Workspace</span></span>
           </div>
-        )}
+          <button type="button" onClick={handleLogout} className="btn-glass" style={{ padding: '8px 16px', fontSize: '13px' }}>Sign Out</button>
+        </header>
 
-        {/* Progress Bar */}
-        <div style={{ background: '#fff', borderRadius: '14px', padding: '30px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)', border: '1px solid #e2e8f0', marginBottom: '30px', textAlign: 'center' }}>
-          <h3 style={{ textTransform: 'uppercase', fontSize: '13px', letterSpacing: '1px', color: '#475569', margin: '0 0 25px 0', fontWeight: '700' }}>Application Progress</h3>
+        <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '40px 20px' }}>
           
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', maxWidth: '800px', margin: '0 auto' }}>
-            {stageMapping.map((stage, index) => {
-              let isCompleted = index <= currentStepIndex;
-              
-              if (stage.id === 'Assignment') {
-                isCompleted = assignment?.assignment_status === 'Submitted' || assignment?.assignment_status === 'Evaluated'; 
-              } else if (stage.id === 'Interview') {
-                const isInterviewCleared = candidate.current_stage === 'Selected' || 
-                                          candidate.current_stage === 'Probation' || 
-                                          candidate.current_stage === 'Onboarding Done' || 
-                                          candidate.current_stage === 'Internship Discontinued' ||
-                                          candidate.current_stage === 'Withdrawn' ||
-                                          candidate.current_stage === 'Terminated';
-                if (candidate.current_stage === 'Waitlist') {
-                  const restoreStage = candidate.waitlist_restore_stage || 'Applied';
-                  const restoreIndex = stageMapping.findIndex(s => s.id === restoreStage);
-                  isCompleted = index <= restoreIndex;
+          {/* Waitlist Banner */}
+          {isOnWaitlist && (
+            <div className="glass-panel animate-fade-up" style={{ padding: '30px', marginBottom: '30px', textAlign: 'center', border: '1px solid #8b5cf6', background: 'rgba(139, 92, 246, 0.1)' }}>
+              <h3 style={{ color: '#c4b5fd', margin: '0 0 8px 0', fontSize: '22px' }}>You're on our Waitlist</h3>
+              <p style={{ color: '#e2e8f0', fontSize: '15px', maxWidth: '600px', margin: '0 auto', lineHeight: '1.6' }}>
+                Thank you for your interest. While we don't have an exact match right now, your profile is impressive and we've placed you on our priority waitlist.
+              </p>
+            </div>
+          )}
+
+          {/* Progress Bar (Glassmorphic) */}
+          <div className="glass-panel animate-fade-up delay-100" style={{ padding: '30px', marginBottom: '30px', textAlign: 'center' }}>
+            <h3 style={{ textTransform: 'uppercase', fontSize: '12px', letterSpacing: '2px', color: 'var(--text-muted)', margin: '0 0 30px 0', fontWeight: '700' }}>Application Pipeline</h3>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', maxWidth: '800px', margin: '0 auto' }}>
+              {stageMapping.map((stage, index) => {
+                let isCompleted = index <= currentStepIndex;
+                if (stage.id === 'Assignment') {
+                  isCompleted = assignment?.assignment_status === 'Submitted' || assignment?.assignment_status === 'Evaluated';
+                } else if (stage.id === 'Interview') {
+                  const isInterviewCleared = ['Selected', 'Probation', 'Onboarding Done', 'Internship Discontinued', 'Withdrawn', 'Terminated'].includes(candidate.current_stage);
+                  isCompleted = candidate.current_stage === 'Waitlist' ? index <= stageMapping.findIndex(s => s.id === (candidate.waitlist_restore_stage || 'Applied')) : isInterviewCleared;
+                } else if (stage.id === 'Probation') {
+                  const isProbationActive = ['Probation', 'Onboarding Done', 'Internship Discontinued', 'Withdrawn', 'Terminated'].includes(candidate.current_stage);
+                  isCompleted = candidate.current_stage === 'Waitlist' ? index <= stageMapping.findIndex(s => s.id === (candidate.waitlist_restore_stage || 'Applied')) : isProbationActive;
+                } else if (stage.id === 'Onboarding Done') {
+                  isCompleted = candidate.current_stage === 'Onboarding Done';
                 } else {
-                  isCompleted = isInterviewCleared;
+                  isCompleted = candidate.current_stage === 'Waitlist' && stage.id === 'Applied' ? true : index <= currentStepIndex;
                 }
-              } else if (stage.id === 'Probation') {
-                const isProbationActive = candidate.current_stage === 'Probation' || 
-                                          candidate.current_stage === 'Onboarding Done' ||
-                                          candidate.current_stage === 'Internship Discontinued' ||
-                                          candidate.current_stage === 'Withdrawn' ||
-                                          candidate.current_stage === 'Terminated';
-                if (candidate.current_stage === 'Waitlist') {
-                  const restoreStage = candidate.waitlist_restore_stage || 'Applied';
-                  const restoreIndex = stageMapping.findIndex(s => s.id === restoreStage);
-                  isCompleted = index <= restoreIndex;
-                } else {
-                  isCompleted = isProbationActive;
-                }
-              } else if (stage.id === 'Onboarding Done') {
-                isCompleted = candidate.current_stage === 'Onboarding Done';
-                if (candidate.current_stage === 'Waitlist') {
-                  isCompleted = false;
-                }
-              } else {
-                if (candidate.current_stage === 'Waitlist' && stage.id === 'Applied') {
-                  isCompleted = true;
-                } else {
-                  isCompleted = index <= currentStepIndex;
-                }
-              }
 
-              const isActive = index === currentStepIndex && 
-                               candidate.current_stage !== 'Rejected' && 
-                               candidate.current_stage !== 'Internship Discontinued' && 
-                               candidate.current_stage !== 'Withdrawn' && 
-                               candidate.current_stage !== 'Terminated' && 
-                               candidate.current_stage !== 'Waitlist';
-              
-              let bgColor = '#cbd5e1';
-              if (isCompleted) bgColor = '#10b981';
-              if (isActive && !isCompleted && candidate.current_stage !== 'Rejected' && candidate.current_stage !== 'Internship Discontinued' && candidate.current_stage !== 'Withdrawn' && candidate.current_stage !== 'Terminated' && candidate.current_stage !== 'Waitlist') bgColor = '#2563eb';
-
-              return (
-                <React.Fragment key={stage.id}>
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative', flex: 1 }}>
-                    <div style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: bgColor, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', fontSize: '14px' }}>
-                      {isCompleted && candidate.current_stage !== 'Rejected' && candidate.current_stage !== 'Internship Discontinued' && candidate.current_stage !== 'Withdrawn' && candidate.current_stage !== 'Terminated' && candidate.current_stage !== 'Waitlist' ? '✓' : index + 1}
-                    </div>
-                    <span style={{ fontSize: '12px', fontWeight: '700', marginTop: '8px', color: isCompleted || isActive ? '#0f172a' : '#64748b', whiteSpace: 'pre-line', textAlign: 'center' }}>
-                      {stage.label}
-                    </span>
-                  </div>
-                  {index < stageMapping.length - 1 && (
-                    <div style={{ height: '3px', background: index < currentStepIndex ? '#10b981' : '#e2e8f0', flex: 1, position: 'relative', top: '-10px' }} />
-                  )}
-                </React.Fragment>
-              );
-            })}
-          </div>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '7fr 4fr', gap: '30px' }}>
-          <div style={{ background: '#fff', borderRadius: '12px', padding: '30px', boxShadow: '0 4px 15px rgba(0,0,0,0.02)', border: '1px solid #e2e8f0' }}>
-            <h2 style={{ fontSize: '22px', color: '#0f172a', fontWeight: '800', margin: '0 0 6px 0' }}>WELCOME, {candidate.name?.toUpperCase()}!</h2>
-            <p style={{ color: '#64748b', fontSize: '14px', margin: '0 0 25px 0' }}>Your internship portal tracker at Jarurat Care Foundation is active.</p>
-            <hr style={{ border: 'none', height: '1px', backgroundColor: '#e2e8f0', marginBottom: '25px' }} />
-            
-            {candidate.current_stage === 'Applied' && (
-              <div style={{ padding: '20px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                <h3 style={{ margin: '0 0 10px 0', fontSize: '16px', color: '#1e293b', fontWeight: '600' }}>Application Under Review</h3>
-                <p style={{ margin: 0, color: '#475569', fontSize: '14px', lineHeight: '1.6' }}>
-                  We are currently evaluating your profile. If your qualifications align with our requirements, you will be contacted with the next steps.
-                </p>
-              </div>
-            )}
-
-            {candidate.current_stage === 'Assignment' && (
-              <div>
-                {assignment && (assignment.assignment_status === 'Submitted' || assignment.assignment_status === 'Evaluated') ? (
-                  <div style={{ 
-                    background: isAssignmentLate() ? '#fef2f2' : '#f0fdf4', 
-                    borderLeft: isAssignmentLate() ? '4px solid #ef4444' : '4px solid #10b981', 
-                    padding: '12px 18px', 
-                    borderRadius: '4px', 
-                    marginBottom: '25px' 
-                  }}>
-                    <p style={{ margin: 0, color: isAssignmentLate() ? '#991b1b' : '#166534', fontSize: '14px', lineHeight: '1.5', fontWeight: '500' }}>
-                      {isAssignmentLate() ? (
-                        <>
-                          ⚠️ <strong>LATE SUBMISSION</strong> — Your assignment was submitted {getLateDuration()} past the deadline. HR will review your submission.
-                        </>
-                      ) : (
-                        '✅ Your assignment is currently under review. Please wait for further updates from our team.'
-                      )}
-                    </p>
-                  </div>
-                ) : (
-                  <div style={{ background: '#f8fafc', borderLeft: '4px solid #2563eb', padding: '12px 18px', borderRadius: '4px', marginBottom: '25px' }}>
-                    <p style={{ margin: 0, color: '#1e293b', fontSize: '14px', lineHeight: '1.5' }}>
-                      Please complete the <strong>{candidate.domain}</strong> assessment below. Your submission will be reviewed by our team. <br />
-                      {isLate ? (
-                        <span style={{ color: '#dc2626', fontWeight: '500' }}>
-                          ⏰ <strong>DEADLINE OVER</strong> — Submission beyond this point will be recorded as <strong>LATE</strong>.
-                          <br />
-                          <span style={{ fontSize: '13px', color: '#991b1b' }}>
-                            (Late by: {lateDuration})
-                          </span>
-                        </span>
-                      ) : (
-                        <span style={{ color: '#dc2626', fontWeight: '500' }}>
-                          ⏱️ You have <strong>{formatTime(timeLeft)}</strong> to submit.
-                        </span>
-                      )}
-                    </p>
-                  </div>
-                )}
-
-                {assignment ? (
-                  <div style={{ background: '#fafafa', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '20px' }}>
-                    <h3 style={{ margin: '0 0 15px 0', fontSize: '16px', color: '#0f172a', textAlign: 'center', fontWeight: 'bold' }}>
-                      Task: {getAssignmentTitle()}
-                    </h3>
-                    
-                    <div style={{ textAlign: 'center', marginBottom: '25px' }}>
-                      <a href={assignment.task_link_template} target="_blank" rel="noreferrer" style={{ display: 'inline-block', backgroundColor: '#2563eb', color: '#fff', textDecoration: 'none', padding: '12px 20px', borderRadius: '6px', fontSize: '14px', fontWeight: '600' }}>
-                        View Assignment
-                      </a>
-                    </div>
-                    
-                    <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '20px' }}>
-                      {/* File Upload Section */}
-                      <div style={{ marginBottom: '15px' }}>
-                        <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#475569', marginBottom: '6px' }}>
-                          Upload Files (Max 5 files, any format, max 100MB each)
-                        </label>
-                        
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                          <label style={{
-                            display: 'inline-block',
-                            padding: '8px 16px',
-                            background: '#2563eb',
-                            color: '#fff',
-                            borderRadius: '6px',
-                            cursor: isSubmissionDisabled() ? 'not-allowed' : 'pointer',
-                            fontSize: '14px',
-                            fontWeight: '500',
-                            border: 'none',
-                            opacity: isSubmissionDisabled() ? 0.6 : 1
-                          }}>
-                            Choose Files
-                            <input 
-                              type="file" 
-                              multiple
-                              onChange={handleFileUpload} 
-                              disabled={isSubmissionDisabled() || uploadedFiles.length >= 5}
-                              style={{ display: 'none' }} 
-                            />
-                          </label>
-                          {isUploadingFiles && <span style={{ fontSize: '13px', color: '#64748b' }}>Uploading...</span>}
-                          <span style={{ fontSize: '13px', color: '#94a3b8' }}>
-                            {uploadedFiles.length}/5 files uploaded
-                          </span>
-                        </div>
-                        
-                        {/* Uploaded Files List */}
-                        {uploadedFiles.length > 0 && (
-                          <div style={{ marginTop: '10px' }}>
-                            {uploadedFiles.map((file) => (
-                              <div key={file.id} style={{
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                alignItems: 'center',
-                                padding: '6px 10px',
-                                background: '#f8fafc',
-                                borderRadius: '4px',
-                                marginBottom: '4px',
-                                border: '1px solid #e2e8f0'
-                              }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
-                                  <span style={{ fontSize: '12px' }}>📄</span>
-                                  <a 
-                                    href={file.file_url} 
-                                    target="_blank" 
-                                    rel="noreferrer"
-                                    style={{ 
-                                      fontSize: '13px', 
-                                      color: '#2563eb', 
-                                      textDecoration: 'none',
-                                      flex: 1,
-                                      overflow: 'hidden',
-                                      textOverflow: 'ellipsis',
-                                      whiteSpace: 'nowrap'
-                                    }}
-                                  >
-                                    {file.file_name}
-                                  </a>
-                                  <span style={{ fontSize: '11px', color: '#94a3b8' }}>
-                                    {(file.file_size / 1024 / 1024).toFixed(2)} MB
-                                  </span>
-                                </div>
-                                {!isSubmissionDisabled() && (
-                                  <button
-                                    onClick={() => handleRemoveFile(file.id)}
-                                    style={{
-                                      padding: '2px 8px',
-                                      background: '#fee2e2',
-                                      color: '#dc2626',
-                                      border: 'none',
-                                      borderRadius: '4px',
-                                      cursor: 'pointer',
-                                      fontSize: '12px'
-                                    }}
-                                  >
-                                    ✕
-                                  </button>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Link Input Section */}
-                      <div style={{ marginBottom: '15px' }}>
-                        <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#475569', marginBottom: '4px' }}>
-                          And/Or Provide a Link (Google Drive, etc.)
-                        </label>
-                        <div style={{ display: 'flex', gap: '12px' }}>
-                          <input 
-                            type="url" 
-                            placeholder="Paste Your Google Drive Assignment Link Here" 
-                            value={assignmentLink}
-                            onChange={(e) => setAssignmentLink(e.target.value)}
-                            disabled={isSubmissionDisabled()}
-                            style={{ 
-                              flex: 1, 
-                              padding: '10px 14px', 
-                              border: '1px solid #cbd5e1', 
-                              borderRadius: '6px', 
-                              outline: 'none', 
-                              fontSize: '14px', 
-                              backgroundColor: isSubmissionDisabled() ? '#f1f5f9' : '#fff', 
-                              color: '#000' 
-                            }} 
-                          />
-                        </div>
-                      </div>
-
-                      {/* Submit Button */}
-                      <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-                        <button 
-                          onClick={handleSubmitAssignment} 
-                          disabled={isSubmissionDisabled() || !isSubmissionValid()}
-                          style={{ 
-                            backgroundColor: (isSubmissionDisabled() || !isSubmissionValid()) ? '#cbd5e1' : (isLate ? '#dc2626' : '#059669'), 
-                            color: '#fff', 
-                            border: 'none', 
-                            padding: '10px 24px', 
-                            borderRadius: '6px', 
-                            cursor: (isSubmissionDisabled() || !isSubmissionValid()) ? 'not-allowed' : 'pointer', 
-                            fontWeight: '600', 
-                            fontSize: '14px' 
-                          }}
-                        >
-                          {isSubmitting ? 'Submitting...' : (isLate ? 'Submit Late' : 'Submit Assignment')}
-                        </button>
-                        {!isSubmissionValid() && !isSubmissionDisabled() && (
-                          <span style={{ fontSize: '12px', color: '#dc2626' }}>
-                            ⚠️ Please upload at least one file or provide a link
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Submission Status */}
-                      {isLate && !isSubmissionCompleted && (
-                        <p style={{ color: '#dc2626', fontSize: '13px', fontWeight: '500', marginTop: '8px', textAlign: 'center' }}>
-                          ⚠️ You are submitting <strong>LATE</strong> by {lateDuration}. This will be recorded as a late submission.
-                        </p>
-                      )}
-                      {isSubmissionCompleted && isAssignmentLate() && (
-                        <p style={{ color: '#dc2626', fontSize: '13px', fontWeight: '500', marginTop: '8px', textAlign: 'center' }}>
-                          ⚠️ <strong>LATE SUBMISSION</strong> — Submitted {getLateDuration()} past the deadline.
-                        </p>
-                      )}
-                      {assignment.submitted_at && !isAssignmentLate() && (
-                        <p style={{ color: '#059669', fontSize: '13px', fontWeight: '500', marginTop: '8px', textAlign: 'center' }}>
-                          ✓ Submitted at {new Date(assignment.submitted_at).toLocaleString()}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                ) : <p style={{ color: '#64748b', fontStyle: 'italic' }}>Generating target module tasks configuration hooks entries...</p>}
-              </div>
-            )}
-
-            {candidate.current_stage === 'Interview' && (
-              <div>
-                <h3 style={{ fontSize: '16px', color: '#0f172a', margin: '0 0 15px 0' }}>Your Scheduled Interview Operations</h3>
+                const isActive = index === currentStepIndex && !['Rejected', 'Internship Discontinued', 'Withdrawn', 'Terminated', 'Waitlist'].includes(candidate.current_stage);
                 
-                {hasClearedR1 && !hasClearedR2 && (
-                  <div style={{ 
-                    background: '#f0fdf4', 
-                    borderLeft: '4px solid #22c55e', 
-                    borderRadius: '6px', 
-                    padding: '14px 18px', 
-                    marginBottom: '16px'
-                  }}>
-                    <p style={{ margin: 0, color: '#166534', fontSize: '14px', lineHeight: '1.5' }}>
-                      <span style={{ fontSize: '20px' }}>🎉</span>
-                      <span style={{ fontWeight: '600' }}> Round 1 Cleared</span> — Congratulations on successfully clearing Round 1. Our team will reach out to you shortly with details regarding the next interview round.                    
-                    </p>
-                  </div>
-                )}
+                let bgColor = 'rgba(255, 255, 255, 0.1)'; let textColor = '#64748b'; let glow = 'none';
 
-                {hasClearedR2 && (
-                  <div style={{ 
-                    background: '#eff6ff', 
-                    borderLeft: '4px solid #3b82f6', 
-                    borderRadius: '6px', 
-                    padding: '14px 18px', 
-                    marginBottom: '16px'
-                  }}>
-                    <p style={{ margin: 0, color: '#1e40af', fontSize: '14px', lineHeight: '1.5' }}>
-                      <span style={{ fontWeight: '600' }}>★ All Rounds Completed</span> — Outstanding! You've successfully completed all interview rounds. Our team will reach out with the next steps.
-                    </p>
-                  </div>
-                )}
+                if (isCompleted) { bgColor = '#10b981'; textColor = '#fff'; glow = '0 0 15px rgba(16, 185, 129, 0.4)'; }
+                if (isActive && !isCompleted && !['Rejected', 'Internship Discontinued', 'Withdrawn', 'Terminated', 'Waitlist'].includes(candidate.current_stage)) { bgColor = 'var(--primary)'; textColor = '#fff'; glow = '0 0 20px var(--primary-glow)'; }
 
-                {interviews.length === 0 ? (
-                  <p style={{ color: '#64748b', fontSize: '14px' }}>
-                    Your profile is under review for the Interview stage. We will notify you here once your interview slot is finalized.
-                  </p>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                    {interviews
-                      .filter(iv => iv.status !== 'On Hold' && iv.result !== 'On Hold')
-                      .map(iv => {
-                      let badgeBg = '#f1f5f9';
-                      let badgeColor = '#475569';
-                      let badgeText = iv.status || 'Pending';
+                return (
+                  <React.Fragment key={stage.id}>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative', flex: 1 }}>
+                      <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: bgColor, color: textColor, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', fontSize: '14px', boxShadow: glow, transition: 'all 0.3s' }}>
+                        {isCompleted && !['Rejected', 'Internship Discontinued', 'Withdrawn', 'Terminated', 'Waitlist'].includes(candidate.current_stage) ? '✓' : index + 1}
+                      </div>
+                      <span style={{ fontSize: '11px', fontWeight: '600', marginTop: '12px', color: isCompleted || isActive ? '#fff' : 'var(--text-muted)', whiteSpace: 'pre-line', textAlign: 'center', letterSpacing: '0.5px' }}>{stage.label}</span>
+                    </div>
+                    {index < stageMapping.length - 1 && <div style={{ height: '2px', background: index < currentStepIndex ? '#10b981' : 'rgba(255, 255, 255, 0.1)', flex: 1, position: 'relative', top: '-15px' }} />}
+                  </React.Fragment>
+                );
+              })}
+            </div>
+          </div>
 
-                      if (iv.result === 'Rejected') {
-                        badgeBg = '#fef2f2'; badgeColor = '#dc2626'; badgeText = 'Rejected';
-                      } else if (iv.status === 'Reschedule_Requested') {
-                        badgeBg = '#fef3c7'; badgeColor = '#d97706'; badgeText = 'Reschedule Requested';
-                      } else if (iv.status === 'Scheduled') {
-                        badgeBg = '#dbeafe'; badgeColor = '#1d4ed8'; badgeText = 'Scheduled';
-                      } else if (iv.result === 'Selected') {
-                        badgeBg = '#dcfce7'; badgeColor = '#16a34a'; badgeText = 'Cleared';
-                      }
+          <div style={{ display: 'grid', gridTemplateColumns: '7fr 4fr', gap: '30px' }} className="animate-fade-up delay-200">
+            {/* Main Action Area */}
+            <div className="glass-panel" style={{ padding: '40px' }}>
+              <h2 style={{ fontSize: '28px', color: '#fff', fontWeight: '800', margin: '0 0 8px 0', letterSpacing: '-0.5px' }}>Welcome to the workspace, {candidate.name?.split(' ')[0]}</h2>
+              <p style={{ color: 'var(--text-muted)', fontSize: '15px', margin: '0 0 30px 0' }}>Your internship lifecycle portal is now active.</p>
+              
+              {/* STAGE: APPLIED */}
+              {candidate.current_stage === 'Applied' && (
+                <div style={{ padding: '24px', background: 'rgba(255, 255, 255, 0.03)', borderRadius: '12px', border: '1px solid var(--glass-border)' }}>
+                  <h3 style={{ margin: '0 0 12px 0', fontSize: '18px', color: '#fff', fontWeight: '600' }}>Application Under Review</h3>
+                  <p style={{ margin: 0, color: 'var(--text-muted)', fontSize: '15px', lineHeight: '1.6' }}>We are currently evaluating your profile. If your qualifications align with our mission requirements, our system will provision the next steps.</p>
+                </div>
+              )}
 
-                      const isAccepted = iv.candidate_accepted === true;
-                      const isRescheduleRequested = iv.status === 'Reschedule_Requested';
-                      const isRescheduleFormOpen = selectedInterviewId === iv.id;
+              {/* STAGE: ASSIGNMENT */}
+              {candidate.current_stage === 'Assignment' && (
+                <div>
+                  {assignment && (assignment.assignment_status === 'Submitted' || assignment.assignment_status === 'Evaluated') ? (
+                    <div style={{ background: isAssignmentLate() ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)', borderLeft: isAssignmentLate() ? '4px solid #ef4444' : '4px solid #10b981', padding: '16px 20px', borderRadius: '8px', marginBottom: '25px' }}>
+                      <p style={{ margin: 0, color: isAssignmentLate() ? '#fca5a5' : '#6ee7b7', fontSize: '15px', lineHeight: '1.5', fontWeight: '500' }}>
+                        {isAssignmentLate() ? `LATE SUBMISSION: Your assignment was submitted ${getLateDuration()} past the deadline.` : 'Your assignment is securely logged and under evaluation.'}
+                      </p>
+                    </div>
+                  ) : (
+                    <div style={{ background: 'rgba(59, 130, 246, 0.1)', borderLeft: '4px solid #3b82f6', padding: '16px 20px', borderRadius: '8px', marginBottom: '25px' }}>
+                      <p style={{ margin: 0, color: '#bfdbfe', fontSize: '15px', lineHeight: '1.5' }}>
+                        Please complete the <strong>{candidate.domain}</strong> assessment. <br />
+                        {isLate ? <span style={{ color: '#fca5a5', fontWeight: '600', display: 'block', marginTop: '8px' }}>DEADLINE OVER. (Late by: {lateDuration})</span> : <span style={{ color: '#93c5fd', fontWeight: '600', display: 'block', marginTop: '8px' }}>Time remaining: {formatTime(timeLeft)}</span>}
+                      </p>
+                    </div>
+                  )}
 
-                      const timeSlot = getTimeSlotDisplay(iv);
-                      const formattedDate = getFormattedDateIST(iv.scheduled_date_time);
-
-                      return (
-                        <div key={iv.id} style={{ border: '1px solid #e2e8f0', padding: '20px', borderRadius: '8px', background: '#fcfdfe' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-                            <span style={{ fontWeight: '700', color: '#4f46e5', fontSize: '15px' }}>ROUND PIPELINE: {iv.round}</span>
-                            <span style={{ padding: '4px 10px', borderRadius: '12px', fontSize: '12px', fontWeight: '600', backgroundColor: badgeBg, color: badgeColor }}>
-                              {badgeText}
-                            </span>
+                  {assignment ? (
+                    <div style={{ background: 'rgba(255, 255, 255, 0.02)', border: '1px solid var(--glass-border)', borderRadius: '12px', padding: '30px' }}>
+                      <h3 style={{ margin: '0 0 20px 0', fontSize: '18px', color: '#fff', textAlign: 'center', fontWeight: '700' }}>Task: {getAssignmentTitle()}</h3>
+                      <div style={{ textAlign: 'center', marginBottom: '30px' }}><a href={assignment.task_link_template} target="_blank" rel="noreferrer" className="btn-premium" style={{ display: 'inline-block', textDecoration: 'none' }}>Access Assignment Brief</a></div>
+                      <div style={{ borderTop: '1px solid var(--glass-border)', paddingTop: '24px' }}>
+                        
+                        <div style={{ marginBottom: '20px' }}>
+                          <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#e2e8f0', marginBottom: '10px' }}>Upload Deliverables (Max 5 files, 100MB each)</label>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                            <label className="btn-glass" style={{ padding: '10px 20px', fontSize: '14px', display: 'inline-block', cursor: isSubmissionDisabled() ? 'not-allowed' : 'pointer', opacity: isSubmissionDisabled() ? 0.5 : 1 }}>
+                              Select Files<input type="file" multiple onChange={handleFileUpload} disabled={isSubmissionDisabled() || uploadedFiles.length >= 5} style={{ display: 'none' }} />
+                            </label>
+                            {isUploadingFiles && <span style={{ fontSize: '14px', color: 'var(--text-muted)' }}>Securely uploading...</span>}
+                            <span style={{ fontSize: '14px', color: 'var(--text-muted)' }}>{uploadedFiles.length}/5 uploaded</span>
                           </div>
-                          
-                          <p style={{ margin: '4px 0', fontSize: '14px', color: '#1a202c' }}>
-                            <strong>Date:</strong> {formattedDate}
-                          </p>
-                          <p style={{ margin: '4px 0', fontSize: '14px', color: '#1a202c' }}>
-                            <strong>Time Slot:</strong> {timeSlot || formatTimeIST(iv.scheduled_date_time)}
-                          </p>
-                          
-                          {iv.result === 'Rejected' && (
-                            <div style={{ background: '#fef2f2', color: '#991b1b', padding: '10px', borderRadius: '6px', marginTop: '10px', textAlign: 'center', fontWeight: '500' }}>
-                              ❌ Unfortunately, you have not been selected to move forward in this round.
+                          {uploadedFiles.length > 0 && (
+                            <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                              {uploadedFiles.map((file) => (
+                                <div key={file.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 16px', background: 'rgba(0,0,0,0.2)', borderRadius: '8px', border: '1px solid var(--glass-border)' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', overflow: 'hidden' }}>
+                                    <a href={file.file_url} target="_blank" rel="noreferrer" style={{ fontSize: '14px', color: '#60a5fa', textDecoration: 'none', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{file.file_name}</a>
+                                    <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{(file.file_size / 1024 / 1024).toFixed(2)} MB</span>
+                                  </div>
+                                  {!isSubmissionDisabled() && <button onClick={() => handleRemoveFile(file.id)} style={{ padding: '4px 12px', background: 'rgba(239, 68, 68, 0.1)', color: '#fca5a5', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '6px', cursor: 'pointer', fontSize: '12px' }}>Remove</button>}
+                                </div>
+                              ))}
                             </div>
                           )}
+                        </div>
 
-                          <div style={{ marginTop: '14px', display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-                            <a href={iv.meeting_link} target="_blank" rel="noreferrer" style={{ display: 'inline-block', backgroundColor: '#0f172a', color: '#fff', textDecoration: 'none', padding: '8px 16px', borderRadius: '4px', fontSize: '13px', fontWeight: '500' }}>
-                              Join Digital Room Space
-                            </a>
+                        <div style={{ marginBottom: '24px' }}>
+                          <label style={{ display: 'block', fontSize: '14px', fontWeight: '600', color: '#e2e8f0', marginBottom: '8px' }}>External Links (Drive, GitHub, Figma)</label>
+                          <input type="url" placeholder="https://..." value={assignmentLink} onChange={(e) => setAssignmentLink(e.target.value)} disabled={isSubmissionDisabled()} style={{ width: '100%', padding: '12px 16px', boxSizing: 'border-box', border: '1px solid var(--glass-border)', borderRadius: '8px', outline: 'none', fontSize: '15px', backgroundColor: 'rgba(255, 255, 255, 0.05)', color: '#fff', fontFamily: 'inherit' }} />
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
+                          <button onClick={handleSubmitAssignment} disabled={isSubmissionDisabled() || !isSubmissionValid()} className={isSubmissionDisabled() || !isSubmissionValid() ? 'btn-glass' : 'btn-premium'} style={{ opacity: (isSubmissionDisabled() || !isSubmissionValid()) ? 0.5 : 1 }}>
+                            {isSubmitting ? 'Committing...' : (isLate ? 'Submit Late Penalty' : 'Finalize Submission')}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : <p style={{ color: 'var(--text-muted)' }}>Initializing workspace...</p>}
+                </div>
+              )}
+
+              {/* STAGE: INTERVIEW */}
+              {candidate.current_stage === 'Interview' && (
+                <div>
+                  <h3 style={{ fontSize: '20px', color: '#fff', margin: '0 0 20px 0', fontWeight: '700' }}>Interview Telemetry</h3>
+                  {hasClearedR1 && !hasClearedR2 && (
+                    <div style={{ background: 'rgba(16, 185, 129, 0.1)', borderLeft: '4px solid #10b981', borderRadius: '8px', padding: '16px 20px', marginBottom: '24px' }}>
+                      <p style={{ margin: 0, color: '#6ee7b7', fontSize: '15px' }}><strong>Round 1 Cleared</strong> — Stand by for next module instructions.</p>
+                    </div>
+                  )}
+                  {interviews.length === 0 ? (
+                    <p style={{ color: 'var(--text-muted)', fontSize: '15px' }}>Waiting for HR node to allocate interview coordinates.</p>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                      {interviews.filter(iv => iv.status !== 'On Hold' && iv.result !== 'On Hold').map(iv => {
+                        const isAccepted = iv.candidate_accepted === true;
+                        const isRescheduleRequested = iv.status === 'Reschedule_Requested';
+                        const isRescheduleFormOpen = selectedInterviewId === iv.id;
+                        
+                        return (
+                          <div key={iv.id} style={{ border: '1px solid var(--glass-border)', padding: '24px', borderRadius: '12px', background: 'rgba(255,255,255,0.02)' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px' }}>
+                              <span style={{ fontWeight: '800', color: '#60a5fa', fontSize: '16px', letterSpacing: '1px' }}>{iv.round}</span>
+                              <span style={{ padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '600', backgroundColor: 'rgba(255,255,255,0.1)', color: '#e2e8f0' }}>{iv.status || 'Pending'}</span>
+                            </div>
+                            <p style={{ margin: '6px 0', fontSize: '15px', color: '#cbd5e1' }}><strong>Date:</strong> {getFormattedDateIST(iv.scheduled_date_time)}</p>
+                            <p style={{ margin: '6px 0', fontSize: '15px', color: '#cbd5e1' }}><strong>Time Slot:</strong> {getTimeSlotDisplay(iv) || formatTimeIST(iv.scheduled_date_time)}</p>
                             
-                            <button 
-                              onClick={() => handleAcceptInterview(iv.id)} 
-                              disabled={isAccepted || isRescheduleRequested || isRescheduleFormOpen || iv.result === 'Selected' || iv.result === 'Rejected'}
-                              style={{ 
-                                backgroundColor: (isAccepted || isRescheduleRequested || isRescheduleFormOpen || iv.result === 'Selected' || iv.result === 'Rejected') ? '#9ca3af' : '#059669', 
-                                color: '#fff', 
-                                border: 'none', 
-                                padding: '8px 16px', 
-                                borderRadius: '4px', 
-                                cursor: (isAccepted || isRescheduleRequested || isRescheduleFormOpen || iv.result === 'Selected' || iv.result === 'Rejected') ? 'not-allowed' : 'pointer', 
-                                fontSize: '13px', 
-                                fontWeight: '500' 
-                              }}
-                            >
-                              {iv.result === 'Selected' ? '✅ Cleared' : 
-                               iv.result === 'Rejected' ? '❌ Rejected' :
-                               isAccepted ? 'Invitation Accepted' : 'Accept Invitation'}
-                            </button>
-
-                            {iv.result === 'Pending' && (iv.reschedule_count || 0) < 2 && (
-                              <button 
-                                onClick={() => setSelectedInterviewId(iv.id)} 
-                                disabled={isAccepted || isRescheduleRequested}
-                                style={{ 
-                                  backgroundColor: (isAccepted || isRescheduleRequested) ? '#9ca3af' : '#fff', 
-                                  border: '1px solid #cbd5e1', 
-                                  padding: '8px 14px', 
-                                  borderRadius: '4px', 
-                                  cursor: (isAccepted || isRescheduleRequested) ? 'not-allowed' : 'pointer', 
-                                  fontSize: '13px', 
-                                  color: (isAccepted || isRescheduleRequested) ? '#9ca3af' : '#475569', 
-                                  fontWeight: '500' 
-                                }}
-                              >
-                                {isRescheduleRequested ? 'Reschedule Requested' : 'Request Time Reschedule'}
+                            <div style={{ marginTop: '24px', display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
+                              <a href={iv.meeting_link} target="_blank" rel="noreferrer" className="btn-premium" style={{ textDecoration: 'none' }}>Join Secure Room</a>
+                              <button onClick={() => handleAcceptInterview(iv.id)} disabled={isAccepted || isRescheduleRequested || iv.result === 'Selected' || iv.result === 'Rejected'} className="btn-glass">
+                                {isAccepted ? 'Confirmed' : 'Acknowledge'}
                               </button>
+                              {iv.result === 'Pending' && (iv.reschedule_count || 0) < 2 && (
+                                <button onClick={() => setSelectedInterviewId(iv.id)} disabled={isAccepted || isRescheduleRequested} className="btn-glass" style={{ color: (isAccepted || isRescheduleRequested) ? 'var(--text-muted)' : '#fff' }}>
+                                  {isRescheduleRequested ? 'Reschedule Requested' : 'Request Time Reschedule'}
+                                </button>
+                              )}
+                            </div>
+                            
+                            {isRescheduleFormOpen && (
+                              <form onSubmit={handleRequestReschedule} style={{ marginTop: '20px', padding: '20px', background: 'rgba(245, 158, 11, 0.05)', border: '1px solid rgba(245, 158, 11, 0.3)', borderRadius: '8px' }}>
+                                <h4 style={{ margin: '0 0 10px 0', color: '#fbbf24', fontSize: '14px' }}>Request Reschedule</h4>
+                                <textarea required placeholder="Mention your availability preferences..." value={rescheduleReason} onChange={(e) => setRescheduleReason(e.target.value)} style={{ width: '100%', height: '80px', padding: '12px', border: '1px solid var(--glass-border)', borderRadius: '6px', fontSize: '14px', background: 'rgba(255,255,255,0.05)', color: '#fff', outline: 'none', marginBottom: '10px' }} />
+                                <div style={{ display: 'flex', gap: '10px' }}>
+                                  <button type="submit" className="btn-premium" style={{ background: '#f59e0b', color: '#000' }}>Submit Request</button>
+                                  <button type="button" onClick={() => setSelectedInterviewId(null)} className="btn-glass">Cancel</button>
+                                </div>
+                              </form>
                             )}
-                            {(iv.reschedule_count || 0) >= 2 && <p style={{ color: '#dc2626', fontSize: '12px', marginTop: '8px' }}>Max reschedules reached.</p>}
                           </div>
-                          
-                          {isRescheduleFormOpen && (
-                            <form onSubmit={handleRequestReschedule} style={{ marginTop: '20px', padding: '15px', background: '#fffbeb', border: '1px solid #fef3c7', borderRadius: '8px' }}>
-                              <h4 style={{ margin: '0 0 10px 0', color: '#b45309', fontSize: '14px' }}>Request Reschedule</h4>
-                              <textarea 
-                                required 
-                                placeholder="Please mention your availability preferences and the reason for rescheduling..." 
-                                value={rescheduleReason} 
-                                onChange={(e) => setRescheduleReason(e.target.value)} 
-                                style={{ width: '100%', height: '80px', padding: '10px', boxSizing: 'border-box', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '14px', outline: 'none', fontFamily: 'inherit', marginBottom: '10px' }} 
-                              />
-                              <div style={{ display: 'flex', gap: '10px' }}>
-                                <button type="submit" style={{ backgroundColor: '#b45309', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: '4px', fontSize: '13px', cursor: 'pointer', fontWeight: '600' }}>Submit Request</button>
-                                <button type="button" onClick={() => setSelectedInterviewId(null)} style={{ backgroundColor: 'transparent', border: 'none', color: '#5f6368', fontSize: '13px', cursor: 'pointer' }}>Cancel</button>
-                              </div>
-                            </form>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* END STATES: RESTORED BLOCKS */}
+              
+              {candidate.current_stage === 'Selected' && (
+                <div style={{ textAlign: 'center', padding: '20px 0' }}>
+                  <div style={{ fontSize: '64px', marginBottom: '16px' }}>🎉</div>
+                  <h3 style={{ color: '#34d399', fontSize: '26px', margin: '0 0 12px 0', fontWeight: '800' }}>Congratulations, You Are Selected!</h3>
+                  <p style={{ color: 'var(--text-muted)', fontSize: '16px', maxWidth: '600px', margin: '0 auto 30px auto', lineHeight: '1.6' }}>
+                    We are pleased to inform you that you have successfully cleared all stages of our evaluation process. The HR team will be in touch with you shortly to initiate the next steps of your journey.
+                  </p>
+                  {probationMeeting && (
+                    <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--glass-border)', borderRadius: '12px', padding: '24px', textAlign: 'left', maxWidth: '500px', margin: '0 auto' }}>
+                      <h4 style={{ color: '#fff', margin: '0 0 16px 0', fontSize: '16px', textAlign: 'center' }}>📅 Probation Meeting Scheduled</h4>
+                      <div style={{ background: 'rgba(0,0,0,0.2)', padding: '16px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                        <p style={{ margin: '4px 0', color: 'var(--text-muted)' }}>Date: <span style={{color: '#fff', fontWeight: '600'}}>{getFormattedDateIST(probationMeeting.date)}</span></p>
+                        <p style={{ margin: '4px 0', color: 'var(--text-muted)' }}>Time: <span style={{color: '#fff', fontWeight: '600'}}>{extractTimeFromISO(probationMeeting.date)} - {extractTimeFromISO(probationMeeting.end)}</span></p>
+                        <p style={{ margin: '16px 0 0 0', textAlign: 'center' }}>
+                          <a href={probationMeeting.link} target="_blank" rel="noreferrer" className="btn-premium" style={{ textDecoration: 'none', display: 'inline-block', width: '100%' }}>Join Meeting Securely</a>
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {candidate.current_stage === 'Probation' && (
+                <div style={{ textAlign: 'center', padding: '20px 0' }}>
+                  <div style={{ fontSize: '64px', marginBottom: '16px' }}>🚀</div>
+                  <h3 style={{ color: '#60a5fa', fontSize: '26px', margin: '0 0 12px 0', fontWeight: '800' }}>Active Probation</h3>
+                  <p style={{ color: 'var(--text-muted)', fontSize: '16px', maxWidth: '600px', margin: '0 auto 30px auto', lineHeight: '1.6' }}>
+                    You are currently in your probationary period. We look forward to your growth with the team!
+                  </p>
+                  {probationMeeting && (
+                    <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--glass-border)', borderRadius: '12px', padding: '24px', textAlign: 'left', maxWidth: '500px', margin: '0 auto' }}>
+                      <h4 style={{ color: '#fff', margin: '0 0 16px 0', fontSize: '16px', textAlign: 'center' }}>📅 Probation Meeting Scheduled</h4>
+                      <div style={{ background: 'rgba(0,0,0,0.2)', padding: '16px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                        <p style={{ margin: '4px 0', color: 'var(--text-muted)' }}>Date: <span style={{color: '#fff', fontWeight: '600'}}>{getFormattedDateIST(probationMeeting.date)}</span></p>
+                        <p style={{ margin: '4px 0', color: 'var(--text-muted)' }}>Time: <span style={{color: '#fff', fontWeight: '600'}}>{extractTimeFromISO(probationMeeting.date)} - {extractTimeFromISO(probationMeeting.end)}</span></p>
+                        <p style={{ margin: '16px 0 0 0', textAlign: 'center' }}>
+                          <a href={probationMeeting.link} target="_blank" rel="noreferrer" className="btn-premium" style={{ textDecoration: 'none', display: 'inline-block', width: '100%' }}>Join Meeting Securely</a>
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  {!probationMeeting && (
+                    <p style={{ margin: '6px 0 0 0', fontSize: '14px', color: '#fbbf24' }}>Your probation meeting will be scheduled soon. Please check back.</p>
+                  )}
+                </div>
+              )}
+
+              {candidate.current_stage === 'Onboarding Done' && (
+                <div style={{ textAlign: 'center', padding: '20px 0' }}>
+                  <div style={{ fontSize: '64px', marginBottom: '16px' }}>🎓</div>
+                  <h3 style={{ color: '#34d399', fontSize: '26px', margin: '0 0 12px 0', fontWeight: '800' }}>Onboarding Complete!</h3>
+                  <p style={{ color: 'var(--text-muted)', fontSize: '16px', maxWidth: '600px', margin: '0 auto', lineHeight: '1.6' }}>Congratulations on completing your onboarding journey. We are pleased to officially welcome you to the organization.</p>
+                </div>
+              )}
+
+              {candidate.current_stage === 'Rejected' && (
+                <div style={{ textAlign: 'center', padding: '20px 0' }}>
+                  <div style={{ fontSize: '64px', marginBottom: '16px' }}>📪</div>
+                  <h3 style={{ color: '#fca5a5', fontSize: '26px', margin: '0 0 12px 0', fontWeight: '800' }}>Application Update</h3>
+                  <p style={{ color: 'var(--text-muted)', fontSize: '16px', maxWidth: '600px', margin: '0 auto', lineHeight: '1.6' }}>Thank you for your interest in joining Jarurat Care Foundation. After a thorough review, we regret to inform you that we will not be proceeding with your candidacy at this time. We wish you the very best in your future career endeavors.</p>
+                </div>
+              )}
+
+              {candidate.current_stage === 'Internship Discontinued' && (
+                <div style={{ textAlign: 'center', padding: '20px 0' }}>
+                  <div style={{ fontSize: '64px', marginBottom: '16px' }}>📁</div>
+                  <h3 style={{ color: '#fbbf24', fontSize: '26px', margin: '0 0 12px 0', fontWeight: '800' }}>Internship Discontinued</h3>
+                  <p style={{ color: 'var(--text-muted)', fontSize: '16px', maxWidth: '600px', margin: '0 auto', lineHeight: '1.6' }}>After careful consideration, we have decided to conclude your internship journey. We truly appreciate the efforts you have put in and wish you the very best.</p>
+                </div>
+              )}
+
+              {candidate.current_stage === 'Terminated' && (
+                <div style={{ textAlign: 'center', padding: '20px 0' }}>
+                  <div style={{ fontSize: '64px', marginBottom: '16px' }}>⛔</div>
+                  <h3 style={{ color: '#f87171', fontSize: '26px', margin: '0 0 12px 0', fontWeight: '800' }}>Contract Terminated</h3>
+                  <p style={{ color: 'var(--text-muted)', fontSize: '16px', maxWidth: '600px', margin: '0 auto', lineHeight: '1.6' }}>After careful evaluation of your performance during the probationary period, we have decided to conclude your association with the foundation.</p>
+                </div>
+              )}
+
+              {candidate.current_stage === 'Withdrawn' && (
+                <div style={{ textAlign: 'center', padding: '20px 0' }}>
+                  <div style={{ fontSize: '64px', marginBottom: '16px' }}>👋</div>
+                  <h3 style={{ color: '#c4b5fd', fontSize: '26px', margin: '0 0 12px 0', fontWeight: '800' }}>Application Withdrawn</h3>
+                  <p style={{ color: 'var(--text-muted)', fontSize: '16px', maxWidth: '600px', margin: '0 auto', lineHeight: '1.6' }}>We acknowledge that you have decided to withdraw your application. We respect your decision and appreciate the time you invested in our selection process.</p>
+                </div>
+              )}
+
+            </div>
+
+            {/* Sidebar Widget Area */}
+            <div>
+              {/* Status Widget */}
+              <div className="glass-panel" style={{ padding: '24px', marginBottom: '24px' }}>
+                <h3 style={{ margin: '0 0 16px 0', fontSize: '13px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>System Status</h3>
+                <div>
+                  <span style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>STAGE LOCK</span>
+                  <span style={{ fontSize: '18px', fontWeight: '800', color: '#60a5fa' }}>{candidate.current_stage?.toUpperCase() ?? 'N/A'}</span>
+                </div>
+                <button onClick={fetchWorkflowContext} className="btn-glass" style={{ width: '100%', marginTop: '24px', padding: '10px' }}>Sync State Node</button>
+              </div>
+
+              {/* Support Widget */}
+              <div className="glass-panel" style={{ padding: '24px' }}>
+                <h3 style={{ margin: '0 0 16px 0', fontSize: '13px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>Direct Support Line</h3>
+                <form onSubmit={handleSubmitQuestion}>
+                  <textarea value={newQuestion} onChange={(e) => setNewQuestion(e.target.value)} placeholder="Initialize query..." rows="3" style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid var(--glass-border)', fontSize: '14px', fontFamily: 'inherit', resize: 'vertical', boxSizing: 'border-box', background: 'rgba(255,255,255,0.05)', color: '#fff', outline: 'none' }} />
+                  <button type="submit" disabled={isSubmittingQuestion} className="btn-premium" style={{ width: '100%', marginTop: '12px', padding: '10px', fontSize: '14px' }}>
+                    {isSubmittingQuestion ? 'Transmitting...' : 'Send Query'}
+                  </button>
+                </form>
+
+                {/* RESTORED: Questions Map Logic */}
+                {questions.length > 0 && (
+                  <div style={{ marginTop: '32px' }}>
+                    <h4 style={{ margin: '0 0 16px 0', fontSize: '13px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                      Message History ({questions.length})
+                    </h4>
+                    {questions.map(q => {
+                      const isSystemMessage = q.is_system_message === true;
+                      return (
+                        <div key={q.id} style={{ padding: '16px', background: isSystemMessage ? 'rgba(139, 92, 246, 0.1)' : 'rgba(255,255,255,0.03)', borderRadius: '8px', marginBottom: '12px', border: `1px solid ${isSystemMessage ? 'var(--accent)' : 'var(--glass-border)'}` }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                            <span style={{ fontSize: '11px', fontWeight: '700', padding: '4px 10px', borderRadius: '12px', background: isSystemMessage ? 'rgba(139, 92, 246, 0.2)' : (q.status === 'Replied' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(245, 158, 11, 0.2)'), color: isSystemMessage ? '#c4b5fd' : (q.status === 'Replied' ? '#6ee7b7' : '#fcd34d'), textTransform: 'uppercase' }}>
+                              {isSystemMessage ? 'System Notification' : (q.status === 'Replied' ? 'Replied' : 'Pending')}
+                            </span>
+                          </div>
+                          {isSystemMessage ? (
+                            <>
+                              <p style={{ margin: '0 0 8px 0', fontSize: '14px', fontWeight: '600', color: '#c4b5fd' }}>{q.question}</p>
+                              {q.question_replies?.map(r => (
+                                <div key={r.id} style={{ padding: '12px', background: 'rgba(0,0,0,0.3)', borderRadius: '6px', fontSize: '13px', color: '#e2e8f0', whiteSpace: 'pre-wrap' }}>{r.reply}</div>
+                              ))}
+                            </>
+                          ) : (
+                            <>
+                              <p style={{ margin: '0 0 12px 0', fontSize: '14px', color: '#fff' }}><strong>Q:</strong> {q.question}</p>
+                              {q.question_replies?.map(r => (
+                                <div key={r.id} style={{ paddingLeft: '12px', borderLeft: '2px solid var(--primary)', marginTop: '8px' }}>
+                                  <p style={{ margin: '0 0 4px 0', fontSize: '13px', color: '#93c5fd' }}><strong>HR Reply:</strong> {r.reply}</p>
+                                  <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{new Date(r.created_at).toLocaleString()}</span>
+                                </div>
+                              ))}
+                            </>
                           )}
+                          <p style={{ fontSize: '10px', color: 'var(--text-muted)', margin: '12px 0 0 0' }}>{new Date(q.created_at).toLocaleString()}</p>
                         </div>
                       );
                     })}
                   </div>
                 )}
-              </div>
-            )}
-
-            {candidate.current_stage === 'Selected' && (
-              <div style={{ textAlign: 'center', padding: '10px 0' }}>
-                <span style={{ fontSize: '48px' }}>🎉</span>
-                <h3 style={{ color: '#065f46', fontSize: '22px', margin: '10px 0 6px 0' }}>Congratulations, You Are Selected!</h3>
-                <p style={{ color: '#475569', fontSize: '15px', maxWidth: '600px', margin: '0 auto 20px auto', lineHeight: '1.6' }}>
-                  We are pleased to inform you that you have successfully cleared all stages of our evaluation process. 
-                  Your profile and performance during the interview rounds have demonstrated exceptional potential. 
-                  The HR team will be in touch with you shortly to initiate the next steps of your journey. 
-                  We are excited to welcome you to the team and look forward to working with you.
-                </p>
-
-                {probationMeeting && (
-                  <div style={{ 
-                    background: '#fefce8', 
-                    border: '1px solid #fde68a', 
-                    borderRadius: '8px', 
-                    padding: '20px',
-                    marginTop: '16px',
-                    textAlign: 'left'
-                  }}>
-                    <h4 style={{ color: '#92400e', margin: '0 0 12px 0', fontSize: '16px', textAlign: 'center' }}>
-                      📅 Probation Meeting Scheduled
-                    </h4>
-                    <div style={{ 
-                      background: '#fff', 
-                      padding: '16px', 
-                      borderRadius: '6px', 
-                      border: '1px solid #a7f3d0'
-                    }}>
-                      <p style={{ margin: '4px 0' }}>
-                        <strong>Date:</strong> {getFormattedDateIST(probationMeeting.date)}
-                      </p>
-                      <p style={{ margin: '4px 0' }}>
-                        <strong>Time (IST):</strong> {extractTimeFromISO(probationMeeting.date)} - {extractTimeFromISO(probationMeeting.end)}
-                      </p>
-                      <p style={{ margin: '8px 0 0 0' }}>
-                        <strong>Meeting Link:</strong> 
-                        <a 
-                          href={probationMeeting.link} 
-                          target="_blank" 
-                          rel="noreferrer" 
-                          style={{ 
-                            color: '#2563eb', 
-                            textDecoration: 'none', 
-                            display: 'inline-block',
-                            marginLeft: '6px',
-                            fontWeight: '500'
-                          }}
-                        >
-                          Join Meeting →
-                        </a>
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {candidate.current_stage === 'Rejected' && (
-              <div style={{ textAlign: 'center', padding: '20px 0', color: '#991b1b' }}>
-                <h3 style={{ fontSize: '20px', margin: '0 0 8px 0' }}>Application Update</h3>
-                <p style={{ fontSize: '14px', color: '#475569', maxWidth: '500px', margin: '0 auto', lineHeight: '1.6' }}>
-                  Thank you for your interest in joining Jarurat Care Foundation. After a thorough review, we regret to inform you that we will not be proceeding with your candidacy at this time. We sincerely appreciate the time and effort you invested in this process and wish you the very best in your future career endeavors.
-                </p>
-              </div>
-            )}
-
-            {candidate.current_stage === 'Probation' && (
-              <div style={{ textAlign: 'center', padding: '10px 0' }}>
-                <span style={{ fontSize: '48px' }}>⏳</span>
-                <h3 style={{ color: '#92400e', fontSize: '22px', margin: '10px 0 6px 0' }}>Active Probation</h3>
-                <p style={{ color: '#475569', fontSize: '15px', maxWidth: '500px', margin: '0 auto 20px auto', lineHeight: '1.5' }}>
-                  You are currently in your probationary period. We look forward to your growth with the team!
-                </p>
                 
-                {probationMeeting && (
-                  <div style={{ 
-                    background: '#fefce8', 
-                    border: '1px solid #fde68a', 
-                    borderRadius: '8px', 
-                    padding: '20px',
-                    marginTop: '16px',
-                    textAlign: 'left'
-                  }}>
-                    <h4 style={{ color: '#92400e', margin: '0 0 12px 0', fontSize: '16px', textAlign: 'center' }}>
-                      📅 Probation Meeting Scheduled
-                    </h4>
-                    <div style={{ 
-                      background: '#fff', 
-                      padding: '16px', 
-                      borderRadius: '6px', 
-                      border: '1px solid #a7f3d0'
-                    }}>
-                      <p style={{ margin: '4px 0' }}>
-                        <strong>Date:</strong> {getFormattedDateIST(probationMeeting.date)}
-                      </p>
-                      <p style={{ margin: '4px 0' }}>
-                        <strong>Time (IST):</strong> {extractTimeFromISO(probationMeeting.date)} - {extractTimeFromISO(probationMeeting.end)}
-                      </p>
-                      <p style={{ margin: '8px 0 0 0' }}>
-                        <strong>Meeting Link:</strong> 
-                        <a 
-                          href={probationMeeting.link} 
-                          target="_blank" 
-                          rel="noreferrer" 
-                          style={{ 
-                            color: '#2563eb', 
-                            textDecoration: 'none', 
-                            display: 'inline-block',
-                            marginLeft: '6px',
-                            fontWeight: '500'
-                          }}
-                        >
-                          Join Meeting →
-                        </a>
-                      </p>
-                    </div>
-                  </div>
-                )}
-                
-                {!probationMeeting && (
-                  <p style={{ margin: '6px 0 0 0', fontSize: '13px', color: '#d97706' }}>
-                    ⏳ Your probation meeting will be scheduled soon. Please check back for updates.
-                  </p>
-                )}
-              </div>
-            )}
-
-            {candidate.current_stage === 'Onboarding Done' && (
-              <div style={{ textAlign: 'center', padding: '10px 0' }}>
-                <span style={{ fontSize: '48px' }}>🎉</span>
-                <h3 style={{ color: '#065f46', fontSize: '22px', margin: '10px 0 6px 0' }}>Onboarding Complete!</h3>
-                <p style={{ color: '#475569', fontSize: '15px', maxWidth: '500px', margin: '0 auto 20px auto', lineHeight: '1.5' }}>Congratulations on completing your onboarding journey. We are pleased to welcome you to the organization and look forward to your contributions to the team. You will receive further details soon</p>
-              </div>
-            )}
-
-            {candidate.current_stage === 'Internship Discontinued' && (
-              <div style={{ 
-                textAlign: 'center', 
-                padding: '20px 0',
-                color: '#991b1b'
-              }}>
-                <p style={{ 
-                  fontSize: '18px', 
-                  fontWeight: '600', 
-                  margin: '0 0 16px 0',
-                  color: '#991b1b'
-                }}>
-                  Dear {candidate.name || candidate.full_name || 'Candidate'},
-                </p>
-                <p style={{ 
-                  fontSize: '15px', 
-                  color: '#475569', 
-                  maxWidth: '600px', 
-                  margin: '0 auto', 
-                  lineHeight: '1.8',
-                  textAlign: 'left'
-                }}>
-                  We would like to take this opportunity to thank you for your time and contributions during your tenure with us. 
-                  After careful consideration, we have decided to conclude your internship journey with Jarurat Care Foundation. 
-                  We truly appreciate the efforts you have put in and wish you the very best in your future professional endeavors. 
-                  Should opportunities arise in the future that align with your skills, we will be happy to connect with you again.
-                </p>
-              </div>
-            )}
-
-            {candidate.current_stage === 'Terminated' && (
-              <div style={{ 
-                textAlign: 'center', 
-                padding: '30px 0',
-                background: '#fef2f2',
-                borderRadius: '8px',
-                border: '1px solid #fee2e2'
-              }}>
-                <span style={{ fontSize: '48px' }}>📋</span>
-                <h3 style={{ 
-                  color: '#991b1b', 
-                  fontSize: '22px', 
-                  margin: '10px 0 6px 0' 
-                }}>
-                  Dear {candidate.name || candidate.full_name || 'Candidate'},
-                </h3>
-                <p style={{ 
-                  fontSize: '15px', 
-                  color: '#475569', 
-                  maxWidth: '600px', 
-                  margin: '0 auto', 
-                  lineHeight: '1.8',
-                  textAlign: 'left'
-                }}>
-                  We hope this message finds you well. We are writing to inform you that, after careful evaluation of your performance during the probationary period, we have decided to conclude your association with Jarurat Care Foundation.
-                </p>
-                <p style={{ 
-                  fontSize: '15px', 
-                  color: '#475569', 
-                  maxWidth: '600px', 
-                  margin: '12px auto', 
-                  lineHeight: '1.8',
-                  textAlign: 'left'
-                }}>
-                  We want to thank you for the time and effort you have invested during your time with us. We truly appreciate your contributions and wish you nothing but the very best in your future professional endeavors.
-                </p>
-                <p style={{ 
-                  fontSize: '15px', 
-                  color: '#475569', 
-                  maxWidth: '600px', 
-                  margin: '12px auto 0 auto', 
-                  lineHeight: '1.8',
-                  textAlign: 'left'
-                }}>
-                  Should you have any questions or need any clarification, please feel free to reach out to the HR team. We wish you success in all your future pursuits.
-                </p>
-                <div style={{
-                  marginTop: '20px',
-                  padding: '8px 20px',
-                  background: '#fee2e2',
-                  borderRadius: '8px',
-                  display: 'inline-block',
-                  color: '#991b1b',
-                  fontSize: '13px',
-                  fontWeight: '600'
-                }}>
-                  ⚪ Internship Terminated
+                {/* FAQ Link */}
+                <div style={{ marginTop: '20px', textAlign: 'center', borderTop: '1px solid var(--glass-border)', paddingTop: '16px' }}>
+                  <span onClick={openFAQModal} style={{ color: '#60a5fa', fontSize: '14px', cursor: 'pointer', fontWeight: '600' }}>Browse Knowledge Base →</span>
                 </div>
               </div>
-            )}
-
-            {candidate.current_stage === 'Withdrawn' && (
-              <div style={{ 
-                textAlign: 'center', 
-                padding: '20px 0',
-                color: '#7c3aed'
-              }}>
-                <p style={{ 
-                  fontSize: '18px', 
-                  fontWeight: '600', 
-                  margin: '0 0 16px 0',
-                  color: '#7c3aed'
-                }}>
-                  Dear {candidate.name || candidate.full_name || 'Candidate'},
-                </p>
-                <p style={{ 
-                  fontSize: '15px', 
-                  color: '#475569', 
-                  maxWidth: '600px', 
-                  margin: '0 auto', 
-                  lineHeight: '1.8',
-                  textAlign: 'left'
-                }}>
-                  We acknowledge that you have decided to withdraw your application from the recruitment process with Jarurat Care Foundation.
-                </p>
-                <p style={{ 
-                  fontSize: '15px', 
-                  color: '#475569', 
-                  maxWidth: '600px', 
-                  margin: '8px auto', 
-                  lineHeight: '1.8',
-                  textAlign: 'left'
-                }}>
-                  We respect your decision and appreciate the time and effort you invested in our selection process. We wish you the very best in your future endeavors and hope you find a role that perfectly aligns with your career aspirations.
-                </p>
-                <p style={{ 
-                  fontSize: '15px', 
-                  color: '#475569', 
-                  maxWidth: '600px', 
-                  margin: '8px auto 0 auto', 
-                  lineHeight: '1.8',
-                  textAlign: 'left'
-                }}>
-                  Should you wish to reapply in the future or if opportunities arise that match your profile, we would be happy to connect with you again.
-                </p>
-                <div style={{
-                  marginTop: '16px',
-                  padding: '8px 20px',
-                  background: '#f3e8ff',
-                  borderRadius: '8px',
-                  display: 'inline-block',
-                  color: '#7c3aed',
-                  fontSize: '13px',
-                  fontWeight: '600'
-                }}>
-                  ⚪ Application Withdrawn
-                </div>
-              </div>
-            )}
-
-            {candidate.current_stage === 'Waitlist' && (
-              <div style={{ 
-                padding: '20px', 
-                background: '#f5f3ff', 
-                borderRadius: '8px', 
-                border: '1px solid #e9d5ff',
-                textAlign: 'center'
-              }}>
-                <p style={{ margin: 0, color: '#6d28d9', fontSize: '14px', lineHeight: '1.6' }}>
-                  Your application is currently on our waitlist. 
-                  We will contact you when a suitable position becomes available.
-                </p>
-                {candidate.waitlisted_at && (
-                  <p style={{ margin: '8px 0 0 0', fontSize: '12px', color: '#a78bfa' }}>
-                    Waitlisted on: {formatIST(candidate.waitlisted_at)}
-                  </p>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* RIGHT SIDEBAR */}
-          <div>
-            <div style={{ background: '#fff', borderRadius: '12px', padding: '24px', boxShadow: '0 4px 15px rgba(0,0,0,0.02)', border: '1px solid #e2e8f0', marginBottom: '25px' }}>
-              <h3 style={{ margin: '0 0 15px 0', fontSize: '14px', fontWeight: '700', color: '#334155', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Status & Instructions</h3>
-              <div style={{ marginBottom: '16px' }}>
-                <span style={{ fontSize: '11px', color: '#64748b', display: 'block', fontWeight: '600' }}>CURRENT LIFECYCLE STAGE</span>
-                <span style={{ 
-                  fontSize: '15px', 
-                  fontWeight: '700', 
-                  color: isOnWaitlist ? '#8b5cf6' : '#1e3a8a'
-                }}>
-                  {candidate.current_stage?.toUpperCase() ?? 'N/A'}
-                </span>
-              </div>
-
-              {isOnWaitlist && (
-                <div style={{ 
-                  background: '#f5f3ff', 
-                  padding: '16px', 
-                  borderRadius: '8px', 
-                  border: '1px solid #e9d5ff',
-                  fontSize: '13px', 
-                  color: '#6d28d9', 
-                  lineHeight: '1.6' 
-                }}>
-                  <strong style={{ display: 'block', marginBottom: '8px' }}>⏳ Waitlist Status</strong>
-                  <p style={{ margin: '0', fontSize: '13px' }}>
-                    Your application is currently on our waitlist. We will contact you when a suitable position becomes available.
-                  </p>
-                </div>
-              )}
-
-              {candidate.current_stage === 'Assignment' && assignment && (
-                <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '13px', color: '#334155' }}>
-                  <p style={{ margin: '0 0 6px 0' }}><strong>Assignment:</strong> {candidate.domain}</p>
-                  <p style={{ margin: '0 0 6px 0' }}><strong>Status:</strong> {assignment.assignment_status}</p>
-                  <p style={{ margin: 0 }}>Please complete and submit your assignment via the portal.</p>
-                </div>
-              )}
-
-              {candidate.current_stage === 'Interview' && (
-                <>
-                  {hasR2Scheduled && (
-                    <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '13px', color: '#334155', lineHeight: '1.4' }}>
-                      <strong>Instructions:</strong> If the scheduled time slot aligns with your availability, please click <strong>Accept Invitation</strong> to confirm your presence. Alternatively, click <strong>Request Time Reschedule</strong> to specify your reason and provide alternative availability.
-                      <strong><p>Note : A 1-hour window has been reserved for your interview. HR will reach out to you within this period to confirm a 15-minute interview slot.</p></strong>
-                    </div>
-                  )}
-                  {!hasR2Scheduled && interviews.length > 0 && !hasClearedR1 && (
-                    <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '13px', color: '#334155', lineHeight: '1.4' }}>
-                      <strong>Instructions:</strong> If the scheduled time slot aligns with your availability, please click <strong>Accept Invitation</strong> to confirm your presence. Alternatively, click <strong>Request Time Reschedule</strong> to specify your reason and provide alternative availability.
-                      <strong><p>Note : A 1-hour window has been reserved for your interview. HR will reach out to you within this period to confirm a 15-minute interview slot.</p></strong>
-                    </div>
-                  )}
-                  {hasClearedR1 && !hasClearedR2 && !hasR2Scheduled && (
-                    <div style={{ background: '#f0fdf4', padding: '12px', borderRadius: '6px', borderLeft: '4px solid #22c55e', fontSize: '13px', color: '#166534', lineHeight: '1.5' }}>
-                      <strong>✓ Round 1 Cleared</strong>
-                      <p style={{ margin: '4px 0 0 0', fontSize: '12px' }}>
-                        Congratulations on clearing Round 1. Our team will contact you shortly regarding the next stage.
-                      </p>
-                    </div>
-                  )}
-                  {hasClearedR2 && (
-                    <div style={{ background: '#eff6ff', padding: '12px', borderRadius: '6px', borderLeft: '4px solid #3b82f6', fontSize: '13px', color: '#1e40af', lineHeight: '1.5' }}>
-                      <strong>★ All Rounds Completed</strong>
-                      <p style={{ margin: '4px 0 0 0', fontSize: '12px' }}>
-                        Congratulations on completing all interview rounds. Our team will reach out with the next steps.
-                      </p>
-                    </div>
-                  )}
-                </>
-              )}
-              
-              {candidate.current_stage === 'Selected' && (
-                <div style={{ 
-                  background: '#f0fdf4', 
-                  padding: '16px', 
-                  borderRadius: '8px', 
-                  border: '1px solid #bbf7d0',
-                  fontSize: '13px', 
-                  color: '#166534', 
-                  lineHeight: '1.6' 
-                }}>
-                  <strong style={{ display: 'block', marginBottom: '8px' }}>📋 Probation Period Information</strong>
-                  <p style={{ margin: '0 0 8px 0', fontSize: '13px' }}>
-                    As part of our process, all new members initially go through a probation period of one week. This is to assess mutual fit.
-                  </p>
-                  <p style={{ margin: '0 0 4px 0', fontSize: '13px', fontWeight: '500' }}>During this period:</p>
-                  <ul style={{ margin: '4px 0 0 0', paddingLeft: '18px', fontSize: '13px' }}>
-                    <li>You will be working on assigned tasks</li>
-                    <li>The team will review your performance, communication, and involvement</li>
-                    <li>Based on this, your role will be confirmed for continuation with the organization</li>
-                    <li>Note : Leaves are not permitted during the probation period.</li>
-                  </ul>
-                </div>
-              )}
-              
-              {candidate.current_stage === 'Applied' && (
-                <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '13px', color: '#334155', lineHeight: '1.4' }}><strong>Review Status Context:</strong> Please monitor this dashboard for updates regarding your application status.</div>
-              )}
-
-              {candidate.current_stage === 'Probation' && (
-                <div style={{ 
-                  background: '#fefce8', 
-                  padding: '16px', 
-                  borderRadius: '8px', 
-                  border: '1px solid #fde68a',
-                  fontSize: '13px', 
-                  color: '#92400e', 
-                  lineHeight: '1.6' 
-                }}>
-                  <strong style={{ display: 'block', marginBottom: '8px' }}>⏳ Probation Period</strong>
-                  <p style={{ margin: '0 0 4px 0', fontSize: '13px' }}>
-                    You are currently in your probationary period. This is a time for mutual assessment and growth.
-                  </p>
-                  {probationMeeting && (
-                    <div style={{ 
-                      marginTop: '10px', 
-                      padding: '12px', 
-                      background: '#fff', 
-                      borderRadius: '6px',
-                      border: '1px solid #fde68a'
-                    }}>
-                      <p style={{ margin: '0 0 4px 0', fontWeight: '600', fontSize: '12px' }}>
-                        📅 Probation Meeting Scheduled
-                      </p>
-                      <p style={{ margin: '0 0 2px 0', fontSize: '12px' }}>
-                        <strong>Date:</strong> {getFormattedDateIST(probationMeeting.date)}
-                      </p>
-                      <p style={{ margin: '0 0 2px 0', fontSize: '12px' }}>
-                        <strong>Time (IST):</strong> {extractTimeFromISO(probationMeeting.date)} - {extractTimeFromISO(probationMeeting.end)}
-                      </p>
-                      <p style={{ margin: '4px 0 0 0', fontSize: '12px' }}>
-                        <a 
-                          href={probationMeeting.link} 
-                          target="_blank" 
-                          rel="noreferrer" 
-                          style={{ color: '#2563eb', fontWeight: '500', textDecoration: 'none' }}
-                        >
-                          Join Meeting →
-                        </a>
-                      </p>
-                    </div>
-                  )}
-                  {!probationMeeting && (
-                    <p style={{ margin: '6px 0 0 0', fontSize: '13px', color: '#d97706' }}>
-                      ⏳ Your probation meeting will be scheduled soon. Please check back for updates.
-                    </p>
-                  )}
-                </div>
-              )}
-
-              {candidate.current_stage === 'Terminated' && (
-                <div style={{ 
-                  background: '#fef2f2', 
-                  padding: '16px', 
-                  borderRadius: '8px', 
-                  border: '1px solid #fee2e2',
-                  fontSize: '13px', 
-                  color: '#991b1b', 
-                  lineHeight: '1.6' 
-                }}>
-                  <strong style={{ display: 'block', marginBottom: '8px' }}>📋 Internship Terminated</strong>
-                  <p style={{ margin: '0 0 4px 0', fontSize: '13px' }}>
-                    Your employment has been terminated after the probationary period. Please contact HR if you have any questions.
-                  </p>
-                  <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#7f1d1d' }}>
-                    We wish you all the best in your future endeavors.
-                  </p>
-                </div>
-              )}
-
-              {candidate.current_stage === 'Withdrawn' && (
-                <div style={{ background: '#f3e8ff', padding: '12px', borderRadius: '6px', border: '1px solid #e9d5ff', fontSize: '13px', color: '#6b21a8', lineHeight: '1.5' }}>
-                  <strong>⚠️ Application Withdrawn</strong>
-                  <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#7c3aed' }}>
-                    Your application has been withdrawn. Please contact HR if you have any questions.
-                  </p>
-                </div>
-              )}
-
-              <button onClick={fetchWorkflowContext} style={{ marginTop: '16px', width: '100%', padding: '10px', fontSize: '13px', fontWeight: '600', color: '#2563eb', border: '1px solid #bfdbfe', borderRadius: '6px', background: '#f0f9ff', cursor: 'pointer' }}>🔄 Sync Workspace State</button>
-              <p style={{ fontSize: '11px', color: '#94a3b8', marginTop: '8px', textAlign: 'center' }}>
-                *Use this button if data is not updating automatically.
-              </p>
-            </div>
-
-            {/* QUESTIONS & SUPPORT SECTION */}
-            <div style={{ 
-              background: '#fff', 
-              borderRadius: '12px', 
-              padding: '20px', 
-              boxShadow: '0 1px 3px rgba(0,0,0,0.05)', 
-              border: '1px solid #e2e8f0',
-              marginTop: '20px'
-            }}>
-              <h3 style={{ margin: '0 0 15px 0', fontSize: '15px', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                💬 Ask a Question (Please check FAQs before proceeding)
-              </h3>
-              
-              <form onSubmit={handleSubmitQuestion}>
-                <textarea
-                  value={newQuestion}
-                  onChange={(e) => setNewQuestion(e.target.value)}
-                  placeholder="Type your question here..."
-                  rows="3"
-                  style={{
-                    width: '100%',
-                    padding: '10px',
-                    borderRadius: '6px',
-                    border: '1px solid #cbd5e1',
-                    fontSize: '14px',
-                    fontFamily: 'inherit',
-                    resize: 'vertical',
-                    boxSizing: 'border-box'
-                  }}
-                />
-                <button
-                  type="submit"
-                  disabled={isSubmittingQuestion}
-                  style={{
-                    marginTop: '8px',
-                    width: '100%',
-                    padding: '10px',
-                    background: '#2563eb',
-                    color: '#fff',
-                    border: 'none',
-                    borderRadius: '6px',
-                    cursor: isSubmittingQuestion ? 'not-allowed' : 'pointer',
-                    fontWeight: '600',
-                    opacity: isSubmittingQuestion ? 0.7 : 1
-                  }}
-                >
-                  {isSubmittingQuestion ? 'Submitting...' : 'Submit Question'}
-                </button>
-              </form>
-              
-              {questions.length > 0 && (
-                <div style={{ marginTop: '16px' }}>
-                  <h4 style={{ fontSize: '13px', color: '#64748b', margin: '0 0 10px 0' }}>
-                    Messages ({questions.length})
-                  </h4>
-                  {questions.map(q => {
-                    const isSystemMessage = q.is_system_message === true;
-                    
-                    return (
-                      <div key={q.id} style={{
-                        padding: '12px',
-                        background: isSystemMessage ? '#f5f3ff' : '#f8fafc',
-                        borderRadius: '6px',
-                        marginBottom: '10px',
-                        border: isSystemMessage ? '2px solid #8b5cf6' : '1px solid #e2e8f0'
-                      }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                          <div style={{ flex: 1 }}>
-                            {isSystemMessage ? (
-                              <>
-                                <p style={{ 
-                                  margin: '0 0 8px 0', 
-                                  fontSize: '14px', 
-                                  fontWeight: '600',
-                                  color: '#6d28d9'
-                                }}>
-                                  {q.question}
-                                </p>
-                                {q.question_replies && q.question_replies.length > 0 && (
-                                  <div style={{
-                                    padding: '12px 16px',
-                                    background: '#fff',
-                                    borderRadius: '6px',
-                                    border: '1px solid #e9d5ff'
-                                  }}>
-                                    {q.question_replies.map(r => (
-                                      <div key={r.id} style={{ 
-                                        fontSize: '14px', 
-                                        color: '#1e293b', 
-                                        lineHeight: '1.8',
-                                        whiteSpace: 'pre-wrap'
-                                      }}>
-                                        {r.reply}
-                                        <div style={{ 
-                                          fontSize: '11px', 
-                                          color: '#94a3b8', 
-                                          marginTop: '8px',
-                                          borderTop: '1px solid #f1f5f9',
-                                          paddingTop: '8px'
-                                        }}>
-                                          {new Date(r.created_at).toLocaleString()}
-                                        </div>
-                                      </div>
-                                    ))}
-                                  </div>
-                                )}
-                              </>
-                            ) : (
-                              <>
-                                <p style={{ margin: '0', fontSize: '13px', color: '#1e293b' }}>
-                                  <strong>Q:</strong> {q.question}
-                                </p>
-                                {q.question_replies && q.question_replies.length > 0 && (
-                                  <div style={{ marginTop: '8px', paddingLeft: '12px', borderLeft: '2px solid #2563eb' }}>
-                                    {q.question_replies.map(r => (
-                                      <div key={r.id} style={{ fontSize: '13px', color: '#475569', marginTop: '4px' }}>
-                                        <strong>👤 HR Reply:</strong> {r.reply}
-                                        <span style={{ fontSize: '10px', color: '#94a3b8', marginLeft: '8px' }}>
-                                          {new Date(r.created_at).toLocaleString()}
-                                        </span>
-                                      </div>
-                                    ))}
-                                  </div>
-                                )}
-                              </>
-                            )}
-                            <p style={{ fontSize: '10px', color: '#94a3b8', margin: '4px 0 0 0' }}>
-                              {new Date(q.created_at).toLocaleString()}
-                            </p>
-                          </div>
-                          <span style={{
-                            fontSize: '10px',
-                            fontWeight: '600',
-                            padding: '2px 10px',
-                            borderRadius: '12px',
-                            background: isSystemMessage ? '#ede9fe' : (q.status === 'Replied' ? '#dcfce7' : '#fef3c7'),
-                            color: isSystemMessage ? '#6d28d9' : (q.status === 'Replied' ? '#166534' : '#92400e'),
-                            whiteSpace: 'nowrap',
-                            marginLeft: '8px'
-                          }}>
-                            {isSystemMessage ? '📬 Notification' : (q.status === 'Replied' ? '✅ Replied' : '⏳ Pending')}
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            {/* FAQ SECTION */}
-            <div style={{ 
-              background: '#fff', 
-              borderRadius: '12px', 
-              padding: '20px', 
-              boxShadow: '0 1px 3px rgba(0,0,0,0.05)', 
-              border: '1px solid #e2e8f0',
-              marginTop: '15px'
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h3 style={{ margin: '0', fontSize: '15px', color: '#1e293b' }}>
-                  📖 Frequently Asked Questions
-                </h3>
-                <button 
-                  onClick={openFAQModal}
-                  style={{
-                    padding: '6px 16px',
-                    background: '#2563eb',
-                    color: '#fff',
-                    border: 'none',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    fontSize: '13px',
-                    fontWeight: '500',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px'
-                  }}
-                >
-                  View All
-                  {faqs.length > 0 && (
-                    <span style={{
-                      background: 'rgba(255,255,255,0.2)',
-                      padding: '0 8px',
-                      borderRadius: '12px',
-                      fontSize: '11px'
-                    }}>
-                      {faqs.length}
-                    </span>
-                  )}
-                </button>
-              </div>
-              
-              {faqs.length === 0 ? (
-                <p style={{ color: '#94a3b8', fontSize: '13px', marginTop: '12px' }}>No FAQs available yet.</p>
-              ) : (
-                <p style={{ color: '#64748b', fontSize: '13px', marginTop: '12px' }}>
-                  Click "View All" to see all frequently asked questions.
-                </p>
-              )}
             </div>
           </div>
-        </div>
-      </main>
+        </main>
+      </div>
 
-      {/* FAQ MODAL */}
+      {/* FAQ Modal */}
       {showFAQModal && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0,0,0,0.6)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000,
-          padding: '20px'
-        }}>
-          <div style={{
-            background: '#fff',
-            padding: '30px',
-            borderRadius: '16px',
-            maxWidth: '700px',
-            width: '100%',
-            maxHeight: '80vh',
-            overflowY: 'auto',
-            boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '2px solid #f1f5f9', paddingBottom: '15px' }}>
-              <h2 style={{ margin: 0, color: '#0f172a', fontSize: '22px' }}>📖 Frequently Asked Questions</h2>
-              <button 
-                onClick={closeFAQModal}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  fontSize: '28px',
-                  cursor: 'pointer',
-                  color: '#94a3b8',
-                  padding: '0 8px'
-                }}
-              >
-                ×
-              </button>
-            </div>
-            
-            <p style={{ color: '#64748b', marginBottom: '20px', fontSize: '14px' }}>
-              Questions you might ask about the recruitment process
-            </p>
-
-            {Object.keys(groupedFAQs).length === 0 ? (
-              <p style={{ textAlign: 'center', color: '#94a3b8', padding: '40px 0' }}>No FAQs available yet.</p>
-            ) : (
-              Object.keys(groupedFAQs).map(category => (
-                <div key={category} style={{ marginBottom: '20px' }}>
-                  <h4 style={{ 
-                    color: '#1e3a8a', 
-                    fontSize: '14px', 
-                    fontWeight: '700', 
-                    margin: '0 0 12px 0',
-                    padding: '8px 12px',
-                    background: '#f0f4ff',
-                    borderRadius: '6px',
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.5px'
-                  }}>
-                    {category}
-                  </h4>
-                  {groupedFAQs[category].map(faq => (
-                    <details key={faq.id} style={{ marginBottom: '10px', border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden' }}>
-                      <summary style={{
-                        cursor: 'pointer',
-                        fontWeight: '600',
-                        fontSize: '14px',
-                        color: '#1e293b',
-                        padding: '12px 16px',
-                        background: '#fafafa',
-                        transition: 'background 0.2s'
-                      }}>
-                        {faq.question}
-                      </summary>
-                      <div style={{
-                        padding: '12px 16px',
-                        fontSize: '14px',
-                        color: '#475569',
-                        background: '#fff',
-                        borderTop: '1px solid #e2e8f0',
-                        lineHeight: '1.6'
-                      }}>
-                        {faq.answer}
-                      </div>
-                    </details>
-                  ))}
-                </div>
-              ))
-            )}
-
-            <button 
-              onClick={closeFAQModal}
-              style={{
-                width: '100%',
-                padding: '10px',
-                background: '#e2e8f0',
-                color: '#475569',
-                border: 'none',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                fontWeight: '500',
-                marginTop: '10px'
-              }}
-            >
-              Close
-            </button>
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
+          <div className="glass-panel" style={{ padding: '40px', maxWidth: '600px', width: '100%', maxHeight: '80vh', overflowY: 'auto' }}>
+            <h2 style={{ color: '#fff', margin: '0 0 20px 0' }}>Knowledge Base</h2>
+            <button onClick={closeFAQModal} className="btn-glass" style={{ position: 'absolute', top: '20px', right: '20px', padding: '8px 16px' }}>Close</button>
+            {Object.keys(groupedFAQs).map(category => (
+              <div key={category} style={{ marginBottom: '24px' }}>
+                <h3 style={{ color: '#60a5fa', fontSize: '16px', borderBottom: '1px solid var(--glass-border)', paddingBottom: '8px' }}>{category}</h3>
+                {groupedFAQs[category].map(faq => (
+                  <div key={faq.id} style={{ margin: '16px 0' }}>
+                    <p style={{ color: '#fff', fontWeight: '600', margin: '0 0 8px 0' }}>Q: {faq.question}</p>
+                    <p style={{ color: 'var(--text-muted)', margin: 0, fontSize: '14px', lineHeight: '1.6' }}>A: {faq.answer}</p>
+                  </div>
+                ))}
+              </div>
+            ))}
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }

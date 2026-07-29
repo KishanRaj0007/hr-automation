@@ -1,5 +1,7 @@
+// src/App.jsx
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+import LandingPage from './pages/LandingPage';
 import HRAdminDashboard from './pages/HRAdminDashboard';
 import CandidateDetailsPage from './pages/CandidateDetailsPage';
 import CandidatePortalPage from './pages/CandidatePortalPage';
@@ -12,25 +14,30 @@ function App() {
     <AuthProvider>
       <BrowserRouter>
         <Routes>
+          {/* NEW LANDING PAGE AT ROOT */}
+          <Route path="/" element={<LandingPage />} />
+          
+          {/* MOVED HR DASHBOARD HERE */}
+          <Route path="/hr-dashboard" element={<HRAdminDashboard />} />
+          
           {/* EXISTING ROUTES - UNCHANGED */}
-          <Route path="/" element={<HRAdminDashboard />} />
           <Route path="/candidate/:id" element={<CandidateDetailsPage />} />
           <Route path="/questions" element={<QuestionsPage />} />
           <Route path="/login" element={<CandidatePortalPage />} />
           <Route path="/portal" element={<CandidatePortalPage />} />
-          
+                     
           {/* NEW ROUTES */}
           <Route path="/hr-login" element={<HRLogin />} />
           <Route path="/analytics" element={<HRAdminAnalytics />} />
-          
+                     
           {/* 404 Fallback - UNCHANGED */}
           <Route path="*" element={
             <div style={{ 
-              padding: '50px', 
-              textAlign: 'center', 
-              fontFamily: 'sans-serif', 
-              color: '#64748b' 
-            }}>
+               padding: '50px', 
+               textAlign: 'center', 
+               fontFamily: 'sans-serif', 
+               color: '#64748b' 
+             }}>
               <h2>404: Page Not Found</h2>
             </div>
           } />

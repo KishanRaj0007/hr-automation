@@ -17,466 +17,105 @@ const ChangePasswordModal = ({ onClose }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
-    setMessage('');
-    setMessageType('');
+    setLoading(true); setMessage(''); setMessageType('');
 
-    // Validation
-    if (!currentPassword || !newPassword || !confirmPassword) {
-      setMessage('❌ Please fill in all fields');
-      setMessageType('error');
-      setLoading(false);
-      return;
-    }
-
-    if (newPassword !== confirmPassword) {
-      setMessage('❌ New passwords do not match!');
-      setMessageType('error');
-      setLoading(false);
-      return;
-    }
-
-    if (newPassword.length < 6) {
-      setMessage('❌ Password must be at least 6 characters!');
-      setMessageType('error');
-      setLoading(false);
-      return;
-    }
-
-    if (currentPassword === newPassword) {
-      setMessage('❌ New password must be different from current password!');
-      setMessageType('error');
-      setLoading(false);
-      return;
-    }
+    if (!currentPassword || !newPassword || !confirmPassword) { setMessage('❌ Please fill in all fields'); setMessageType('error'); setLoading(false); return; }
+    if (newPassword !== confirmPassword) { setMessage('❌ Keys do not match!'); setMessageType('error'); setLoading(false); return; }
+    if (newPassword.length < 6) { setMessage('❌ Entropy too low (min 6 chars)'); setMessageType('error'); setLoading(false); return; }
+    if (currentPassword === newPassword) { setMessage('❌ New key must differ from current key'); setMessageType('error'); setLoading(false); return; }
 
     try {
-      // First, verify current password by trying to sign in
-      const { error: verifyError } = await supabase.auth.signInWithPassword({
-        email: hrUser?.email,
-        password: currentPassword
-      });
+      const { error: verifyError } = await supabase.auth.signInWithPassword({ email: hrUser?.email, password: currentPassword });
+      if (verifyError) throw new Error('Current key verification failed');
 
-      if (verifyError) {
-        throw new Error('Current password is incorrect');
-      }
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) throw new Error(error.message);
 
-      // Update password via Supabase Auth
-      const { error } = await supabase.auth.updateUser({
-        password: newPassword
-      });
+      await supabase.from('audit_logs').insert({ table_name: 'hr_users', record_id: hrUser?.id, action: 'password_change', new_data: { user_name: hrUser?.name, user_email: hrUser?.email, changed_at: new Date().toISOString() }, performed_by: hrUser?.email });
 
-      if (error) {
-        throw new Error(error.message);
-      }
+      setMessage('✅ Security protocol updated. Re-authenticating...'); setMessageType('success');
+      setCurrentPassword(''); setNewPassword(''); setConfirmPassword('');
 
-      // Log to audit_logs
-      await supabase
-        .from('audit_logs')
-        .insert({
-          table_name: 'hr_users',
-          record_id: hrUser?.id,
-          action: 'password_change',
-          new_data: {
-            user_name: hrUser?.name,
-            user_email: hrUser?.email,
-            changed_at: new Date().toISOString()
-          },
-          performed_by: hrUser?.email
-        });
-
-      setMessage('✅ Password changed successfully! Please login again.');
-      setMessageType('success');
-      
-      // Clear form
-      setCurrentPassword('');
-      setNewPassword('');
-      setConfirmPassword('');
-
-      // Auto close after 3 seconds
       setTimeout(() => {
-        // Logout user to force re-login with new password
         supabase.auth.signOut();
         localStorage.clear();
         window.location.href = '/hr-login';
       }, 3000);
 
     } catch (error) {
-      setMessage('❌ ' + error.message);
-      setMessageType('error');
-    } finally {
-      setLoading(false);
-    }
+      setMessage('❌ ' + error.message); setMessageType('error');
+    } finally { setLoading(false); }
   };
 
-  const handleClose = () => {
-    if (onClose) onClose();
-  };
+  const inputStyle = { width: '100%', padding: '12px 16px', boxSizing: 'border-box', border: '1px solid var(--glass-border)', borderRadius: '8px', outline: 'none', fontSize: '14px', backgroundColor: 'rgba(255, 255, 255, 0.05)', color: '#fff', transition: 'all 0.2s', fontFamily: 'inherit' };
+  const labelStyle = { display: 'block', textAlign: 'left', fontSize: '13px', fontWeight: '500', color: 'var(--text-muted)', marginBottom: '8px' };
 
   return (
-    <div className="password-modal" style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      background: 'rgba(0,0,0,0.5)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 1000,
-      padding: '20px',
-      backdropFilter: 'blur(4px)'
-    }}>
-      <div style={{
-        background: 'white',
-        padding: '32px',
-        borderRadius: '12px',
-        maxWidth: '440px',
-        width: '100%',
-        maxHeight: '90vh',
-        overflowY: 'auto',
-        boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
-        position: 'relative',
-        animation: 'slideIn 0.3s ease'
-      }}>
-        <style>{`
-          @keyframes slideIn {
-            from {
-              opacity: 0;
-              transform: translateY(-20px);
-            }
-            to {
-              opacity: 1;
-              transform: translateY(0);
-            }
-          }
-        `}</style>
+    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
+      <div className="glass-panel animate-fade-up" style={{ padding: '40px', maxWidth: '440px', width: '100%', maxHeight: '90vh', overflowY: 'auto', position: 'relative' }}>
+        
+        <button onClick={onClose} className="btn-glass" style={{ position: 'absolute', top: '20px', right: '20px', padding: '6px 12px' }}>✕</button>
 
-        {/* Close button */}
-        <button
-          onClick={handleClose}
-          style={{
-            position: 'absolute',
-            top: '12px',
-            right: '12px',
-            background: 'none',
-            border: 'none',
-            fontSize: '24px',
-            cursor: 'pointer',
-            color: '#94a3b8',
-            padding: '4px 8px',
-            borderRadius: '4px',
-            transition: 'background 0.2s'
-          }}
-          onMouseEnter={(e) => e.target.style.background = '#f1f5f9'}
-          onMouseLeave={(e) => e.target.style.background = 'none'}
-        >
-          ✕
-        </button>
-
-        <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-          <div style={{ fontSize: '30px', marginBottom: '8px' }}>🔑</div>
-          <h2 style={{ margin: '0', color: '#1e293b', fontSize: '22px', fontWeight: '700' }}>
-            Change Password
-          </h2>
-          <p style={{ color: '#64748b', fontSize: '14px', margin: '4px 0 0 0' }}>
-            Update your password to something only you know
-          </p>
+        <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+          <div style={{ fontSize: '40px', marginBottom: '16px' }}>🔐</div>
+          <h2 style={{ margin: '0 0 8px 0', color: '#fff', fontSize: '24px', fontWeight: '800' }}>Rotate Cryptographic Key</h2>
+          <p style={{ color: 'var(--text-muted)', fontSize: '14px', margin: 0, lineHeight: '1.5' }}>Ensure your new key maintains high entropy to protect node access.</p>
         </div>
 
         {message && (
-          <div style={{
-            padding: '12px 16px',
-            borderRadius: '6px',
-            marginBottom: '20px',
-            fontSize: '14px',
-            background: messageType === 'success' ? '#f0fdf4' : '#fef2f2',
-            borderLeft: `4px solid ${messageType === 'success' ? '#22c55e' : '#ef4444'}`,
-            color: messageType === 'success' ? '#166534' : '#991b1b',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px'
-          }}>
-            <span>{messageType === 'success' ? '✅' : '❌'}</span>
+          <div style={{ padding: '12px 16px', borderRadius: '8px', marginBottom: '24px', fontSize: '14px', background: messageType === 'success' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)', border: `1px solid ${messageType === 'success' ? '#10b981' : '#ef4444'}`, color: messageType === 'success' ? '#6ee7b7' : '#fca5a5' }}>
             {message}
           </div>
         )}
 
         <form onSubmit={handleSubmit}>
           {/* Current Password */}
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{
-              display: 'block',
-              fontSize: '13px',
-              fontWeight: '600',
-              color: '#475569',
-              marginBottom: '4px'
-            }}>
-              Current Password
-            </label>
+          <div style={{ marginBottom: '20px' }}>
+            <label style={labelStyle}>Current Master Key</label>
             <div style={{ position: 'relative' }}>
-              <input
-                type={showCurrentPassword ? 'text' : 'password'}
-                placeholder="Enter current password"
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                required
-                style={{
-                  width: '100%',
-                  padding: '10px 14px',
-                  paddingRight: '45px',
-                  border: '1px solid #cbd5e1',
-                  borderRadius: '6px',
-                  fontSize: '14px',
-                  outline: 'none',
-                  boxSizing: 'border-box',
-                  transition: 'border-color 0.2s'
-                }}
-                onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
-                onBlur={(e) => e.target.style.borderColor = '#cbd5e1'}
-              />
-              <button
-                type="button"
-                onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                style={{
-                  position: 'absolute',
-                  right: '12px',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  color: '#94a3b8',
-                  padding: '4px',
-                  fontSize: '18px'
-                }}
-              >
-                {showCurrentPassword ? '👁️' : '👁️‍🗨️'}
-              </button>
+              <input type={showCurrentPassword ? 'text' : 'password'} value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} required style={{...inputStyle, paddingRight: '45px'}} />
+              <button type="button" onClick={() => setShowCurrentPassword(!showCurrentPassword)} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>{showCurrentPassword ? '👁️' : '👁️‍🗨️'}</button>
             </div>
           </div>
 
           {/* New Password */}
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{
-              display: 'block',
-              fontSize: '13px',
-              fontWeight: '600',
-              color: '#475569',
-              marginBottom: '4px'
-            }}>
-              New Password
-            </label>
+          <div style={{ marginBottom: '20px' }}>
+            <label style={labelStyle}>New Cipher Key (Min 6)</label>
             <div style={{ position: 'relative' }}>
-              <input
-                type={showNewPassword ? 'text' : 'password'}
-                placeholder="Enter new password (min 6 characters)"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                required
-                minLength="6"
-                style={{
-                  width: '100%',
-                  padding: '10px 14px',
-                  paddingRight: '45px',
-                  border: '1px solid #cbd5e1',
-                  borderRadius: '6px',
-                  fontSize: '14px',
-                  outline: 'none',
-                  boxSizing: 'border-box',
-                  transition: 'border-color 0.2s'
-                }}
-                onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
-                onBlur={(e) => e.target.style.borderColor = '#cbd5e1'}
-              />
-              <button
-                type="button"
-                onClick={() => setShowNewPassword(!showNewPassword)}
-                style={{
-                  position: 'absolute',
-                  right: '12px',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  color: '#94a3b8',
-                  padding: '4px',
-                  fontSize: '18px'
-                }}
-              >
-                {showNewPassword ? '👁️' : '👁️‍🗨️'}
-              </button>
-            </div>
-            <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '4px' }}>
-              Password must be at least 6 characters
+              <input type={showNewPassword ? 'text' : 'password'} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required minLength="6" style={{...inputStyle, paddingRight: '45px'}} />
+              <button type="button" onClick={() => setShowNewPassword(!showNewPassword)} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>{showNewPassword ? '👁️' : '👁️‍🗨️'}</button>
             </div>
           </div>
 
-          {/* Confirm New Password */}
-          <div style={{ marginBottom: '24px' }}>
-            <label style={{
-              display: 'block',
-              fontSize: '13px',
-              fontWeight: '600',
-              color: '#475569',
-              marginBottom: '4px'
-            }}>
-              Confirm New Password
-            </label>
-            <div style={{ position: 'relative' }}>
-              <input
-                type={showConfirmPassword ? 'text' : 'password'}
-                placeholder="Confirm new password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-                style={{
-                  width: '100%',
-                  padding: '10px 14px',
-                  paddingRight: '45px',
-                  border: '1px solid #cbd5e1',
-                  borderRadius: '6px',
-                  fontSize: '14px',
-                  outline: 'none',
-                  boxSizing: 'border-box',
-                  transition: 'border-color 0.2s'
-                }}
-                onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
-                onBlur={(e) => e.target.style.borderColor = '#cbd5e1'}
-              />
-              <button
-                type="button"
-                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                style={{
-                  position: 'absolute',
-                  right: '12px',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  color: '#94a3b8',
-                  padding: '4px',
-                  fontSize: '18px'
-                }}
-              >
-                {showConfirmPassword ? '👁️' : '👁️‍🗨️'}
-              </button>
-            </div>
-          </div>
-
-          {/* Password Strength Indicator */}
+          {/* Strength Indicator */}
           {newPassword && newPassword.length > 0 && (
-            <div style={{ marginBottom: '20px' }}>
-              <div style={{
-                display: 'flex',
-                gap: '4px',
-                height: '4px',
-                marginBottom: '4px'
-              }}>
-                <div style={{
-                  flex: 1,
-                  height: '100%',
-                  borderRadius: '2px',
-                  background: newPassword.length >= 6 ? '#22c55e' : '#e2e8f0'
-                }} />
-                <div style={{
-                  flex: 1,
-                  height: '100%',
-                  borderRadius: '2px',
-                  background: newPassword.length >= 8 ? '#22c55e' : '#e2e8f0'
-                }} />
-                <div style={{
-                  flex: 1,
-                  height: '100%',
-                  borderRadius: '2px',
-                  background: newPassword.length >= 10 ? '#22c55e' : '#e2e8f0'
-                }} />
-                <div style={{
-                  flex: 1,
-                  height: '100%',
-                  borderRadius: '2px',
-                  background: /[!@#$%^&*(),.?":{}|<>]/.test(newPassword) ? '#22c55e' : '#e2e8f0'
-                }} />
+            <div style={{ marginBottom: '24px' }}>
+              <div style={{ display: 'flex', gap: '4px', height: '4px', marginBottom: '8px' }}>
+                <div style={{ flex: 1, borderRadius: '2px', background: newPassword.length >= 6 ? '#34d399' : 'rgba(255,255,255,0.1)' }} />
+                <div style={{ flex: 1, borderRadius: '2px', background: newPassword.length >= 8 ? '#34d399' : 'rgba(255,255,255,0.1)' }} />
+                <div style={{ flex: 1, borderRadius: '2px', background: newPassword.length >= 10 ? '#34d399' : 'rgba(255,255,255,0.1)' }} />
+                <div style={{ flex: 1, borderRadius: '2px', background: /[!@#$%^&*(),.?":{}|<>]/.test(newPassword) ? '#34d399' : 'rgba(255,255,255,0.1)' }} />
               </div>
-              <div style={{
-                fontSize: '11px',
-                color: newPassword.length >= 6 ? '#22c55e' : '#94a3b8'
-              }}>
-                {newPassword.length < 6 ? 'Too short' : 
-                 newPassword.length < 8 ? 'Weak' :
-                 newPassword.length < 10 ? 'Medium' : 'Strong'}
+              <div style={{ fontSize: '11px', color: newPassword.length >= 6 ? '#6ee7b7' : 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                Entropy: {newPassword.length < 6 ? 'Critical' : newPassword.length < 8 ? 'Weak' : newPassword.length < 10 ? 'Standard' : 'Fortified'}
               </div>
             </div>
           )}
 
-          <div style={{
-            display: 'flex',
-            gap: '12px'
-          }}>
-            <button
-              type="button"
-              onClick={handleClose}
-              style={{
-                flex: 1,
-                padding: '12px',
-                background: '#f1f5f9',
-                color: '#475569',
-                border: 'none',
-                borderRadius: '6px',
-                fontSize: '14px',
-                fontWeight: '600',
-                cursor: 'pointer',
-                transition: 'background 0.2s'
-              }}
-              onMouseEnter={(e) => e.target.style.background = '#e2e8f0'}
-              onMouseLeave={(e) => e.target.style.background = '#f1f5f9'}
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              style={{
-                flex: 2,
-                padding: '12px',
-                background: loading ? '#94a3b8' : '#3b82f6',
-                color: 'white',
-                border: 'none',
-                borderRadius: '6px',
-                fontSize: '14px',
-                fontWeight: '600',
-                cursor: loading ? 'not-allowed' : 'pointer',
-                transition: 'background 0.2s',
-                opacity: loading ? 0.7 : 1
-              }}
-              onMouseEnter={(e) => {
-                if (!loading) e.target.style.background = '#2563eb';
-              }}
-              onMouseLeave={(e) => {
-                if (!loading) e.target.style.background = '#3b82f6';
-              }}
-            >
-              {loading ? 'Updating...' : 'Update Password'}
-            </button>
+          {/* Confirm Password */}
+          <div style={{ marginBottom: '32px' }}>
+            <label style={labelStyle}>Verify Cipher Key</label>
+            <div style={{ position: 'relative' }}>
+              <input type={showConfirmPassword ? 'text' : 'password'} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required style={{...inputStyle, paddingRight: '45px'}} />
+              <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}>{showConfirmPassword ? '👁️' : '👁️‍🗨️'}</button>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <button type="button" onClick={onClose} className="btn-glass" style={{ flex: 1 }}>Abort</button>
+            <button type="submit" disabled={loading} className="btn-premium" style={{ flex: 2 }}>{loading ? 'Processing...' : 'Deploy Security Update'}</button>
           </div>
         </form>
-
-        <div style={{
-          marginTop: '16px',
-          paddingTop: '16px',
-          borderTop: '1px solid #f1f5f9',
-          textAlign: 'center'
-        }}>
-          <span style={{
-            fontSize: '11px',
-            color: '#94a3b8'
-          }}>
-            For security, you'll be logged out after changing your password
-          </span>
-        </div>
       </div>
     </div>
   );

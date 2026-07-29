@@ -1,3 +1,4 @@
+// src/pages/QuestionsPage.jsx
 import { useEffect, useState } from 'react';
 import { supabase } from '../services/supabase';
 import { useNavigate } from 'react-router-dom';
@@ -44,235 +45,198 @@ function QuestionsPage() {
     setFilter(filterValue);
   };
 
+  // Reusable styles
+  const inputStyle = { width: '100%', padding: '12px 16px', boxSizing: 'border-box', border: '1px solid var(--glass-border)', borderRadius: '8px', outline: 'none', fontSize: '14px', backgroundColor: 'rgba(255, 255, 255, 0.05)', color: '#fff', transition: 'all 0.2s', fontFamily: 'inherit' };
+
   return (
-    <div style={{ padding: '30px', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', backgroundColor: '#f8fafc', minHeight: '100vh' }}>
-      <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-        {/* Header with Back Button */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-          <button 
-            onClick={() => navigate('/')}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: '#2563eb',
-              cursor: 'pointer',
-              fontWeight: '600',
-              fontSize: '15px',
-              padding: '8px 0',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px'
-            }}
-          >
-            ← Back to Dashboard
-          </button>
-          <h1 style={{ margin: 0, color: '#0f172a', fontSize: '28px', fontWeight: '700' }}>💬 Candidate Questions</h1>
-          <div style={{ width: '150px' }}></div>
-        </div>
-
-        {/* Clickable KPI Cards */}
-        <div style={{ display: 'flex', gap: '20px', marginBottom: '24px', flexWrap: 'wrap' }}>
-          <div 
-            onClick={() => handleFilterClick('all')}
-            style={{ 
-              background: filter === 'all' ? '#eff6ff' : '#fff', 
-              padding: '14px 24px', 
-              borderRadius: '12px', 
-              border: filter === 'all' ? '2px solid #3b82f6' : '1px solid #e2e8f0',
-              cursor: 'pointer',
-              flex: 1,
-              minWidth: '140px',
-              textAlign: 'center',
-              transition: 'all 0.2s ease',
-              boxShadow: filter === 'all' ? '0 4px 12px rgba(59, 130, 246, 0.15)' : '0 1px 3px rgba(0,0,0,0.05)'
-            }}
-          >
-            <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Total Questions</div>
-            <div style={{ fontSize: '28px', fontWeight: '700', color: '#0f172a' }}>{questions.length}</div>
+    <>
+      <div className="aurora-bg" style={{ opacity: 0.4 }}></div>
+      <div style={{ padding: '40px 60px', fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif", minHeight: '100vh', position: 'relative', zIndex: 1 }}>
+        <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+          
+          {/* Header */}
+          <div className="animate-fade-up" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
+            <button 
+              onClick={() => navigate('/')}
+              className="btn-glass"
+              style={{ padding: '8px 16px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}
+            >
+              ← Back to Dashboard
+            </button>
+            <h1 style={{ margin: 0, color: '#fff', fontSize: '32px', fontWeight: '800', letterSpacing: '-0.5px' }}>💬 Support Hub</h1>
+            <div style={{ width: '150px' }}></div>
           </div>
 
-          <div 
-            onClick={() => handleFilterClick('Pending')}
-            style={{ 
-              background: filter === 'Pending' ? '#fffbeb' : '#fff', 
-              padding: '14px 24px', 
-              borderRadius: '12px', 
-              border: filter === 'Pending' ? '2px solid #f59e0b' : '1px solid #e2e8f0',
-              cursor: 'pointer',
-              flex: 1,
-              minWidth: '140px',
-              textAlign: 'center',
-              transition: 'all 0.2s ease',
-              boxShadow: filter === 'Pending' ? '0 4px 12px rgba(245, 158, 11, 0.15)' : '0 1px 3px rgba(0,0,0,0.05)'
-            }}
-          >
-            <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>⏳ Pending</div>
-            <div style={{ fontSize: '28px', fontWeight: '700', color: '#92400e' }}>{pendingCount}</div>
-          </div>
-
-          <div 
-            onClick={() => handleFilterClick('Replied')}
-            style={{ 
-              background: filter === 'Replied' ? '#f0fdf4' : '#fff', 
-              padding: '14px 24px', 
-              borderRadius: '12px', 
-              border: filter === 'Replied' ? '2px solid #22c55e' : '1px solid #e2e8f0',
-              cursor: 'pointer',
-              flex: 1,
-              minWidth: '140px',
-              textAlign: 'center',
-              transition: 'all 0.2s ease',
-              boxShadow: filter === 'Replied' ? '0 4px 12px rgba(34, 197, 94, 0.15)' : '0 1px 3px rgba(0,0,0,0.05)'
-            }}
-          >
-            <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>✅ Replied</div>
-            <div style={{ fontSize: '28px', fontWeight: '700', color: '#166534' }}>{repliedCount}</div>
-          </div>
-
-          <button
-            onClick={fetchQuestions}
-            style={{ 
-              padding: '8px 16px', 
-              background: '#e2e8f0', 
-              color: '#475569', 
-              border: 'none', 
-              borderRadius: '8px', 
-              cursor: 'pointer',
-              fontWeight: '500',
-              fontSize: '13px',
-              alignSelf: 'center',
-              height: 'fit-content',
-              transition: 'background 0.2s ease'
-            }}
-            onMouseEnter={(e) => e.target.style.background = '#cbd5e1'}
-            onMouseLeave={(e) => e.target.style.background = '#e2e8f0'}
-          >
-            🔄 Refresh
-          </button>
-        </div>
-
-        {/* Search and Filter */}
-        <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', flexWrap: 'wrap' }}>
-          <div style={{ flex: 1, minWidth: '200px' }}>
-            <input
-              type="text"
-              placeholder="Search by question or candidate..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
+          {/* Clickable KPI Cards */}
+          <div className="animate-fade-up delay-100" style={{ display: 'flex', gap: '20px', marginBottom: '32px', flexWrap: 'wrap' }}>
+            <div 
+              onClick={() => handleFilterClick('all')}
+              className="glass-panel"
               style={{ 
-                width: '100%',
-                padding: '10px 16px', 
-                borderRadius: '8px', 
-                border: '1px solid #cbd5e1', 
-                fontSize: '14px',
-                backgroundColor: '#ffffff',
-                color: '#1a202c',
-                outline: 'none',
-                boxSizing: 'border-box'
+                padding: '24px', 
+                cursor: 'pointer',
+                flex: 1,
+                minWidth: '140px',
+                textAlign: 'center',
+                transition: 'all 0.3s ease',
+                borderTop: filter === 'all' ? '4px solid var(--primary)' : '1px solid var(--glass-border)',
+                background: filter === 'all' ? 'rgba(59, 130, 246, 0.1)' : 'rgba(255,255,255,0.03)',
+                boxShadow: filter === 'all' ? '0 10px 30px rgba(59, 130, 246, 0.2)' : 'none',
+                transform: filter === 'all' ? 'translateY(-4px)' : 'translateY(0)'
               }}
-              onFocus={(e) => e.target.style.borderColor = '#2563eb'}
-              onBlur={(e) => e.target.style.borderColor = '#cbd5e1'}
-            />
-          </div>
-          <select 
-            value={filter} 
-            onChange={(e) => setFilter(e.target.value)}
-            style={{ 
-              padding: '10px 16px', 
-              borderRadius: '8px', 
-              border: '1px solid #cbd5e1', 
-              background: '#fff',
-              fontSize: '14px',
-              color: '#1a202c',
-              outline: 'none',
-              cursor: 'pointer'
-            }}
-          >
-            <option value="all">All Questions</option>
-            <option value="Pending">⏳ Pending</option>
-            <option value="Replied">✅ Replied</option>
-          </select>
-        </div>
+            >
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px' }}>Total Queries</div>
+              <div style={{ fontSize: '36px', fontWeight: '800', color: filter === 'all' ? '#60a5fa' : '#fff' }}>{questions.length}</div>
+            </div>
 
-        {/* Questions Table */}
-        {loading ? (
-          <p style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>Loading...</p>
-        ) : filteredQuestions.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '60px', background: '#fff', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-            <p style={{ color: '#94a3b8', fontSize: '16px' }}>No questions found</p>
+            <div 
+              onClick={() => handleFilterClick('Pending')}
+              className="glass-panel"
+              style={{ 
+                padding: '24px', 
+                cursor: 'pointer',
+                flex: 1,
+                minWidth: '140px',
+                textAlign: 'center',
+                transition: 'all 0.3s ease',
+                borderTop: filter === 'Pending' ? '4px solid #fbbf24' : '1px solid var(--glass-border)',
+                background: filter === 'Pending' ? 'rgba(245, 158, 11, 0.1)' : 'rgba(255,255,255,0.03)',
+                boxShadow: filter === 'Pending' ? '0 10px 30px rgba(245, 158, 11, 0.2)' : 'none',
+                transform: filter === 'Pending' ? 'translateY(-4px)' : 'translateY(0)'
+              }}
+            >
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px' }}>⏳ Actionable</div>
+              <div style={{ fontSize: '36px', fontWeight: '800', color: filter === 'Pending' ? '#fbbf24' : '#fff' }}>{pendingCount}</div>
+            </div>
+
+            <div 
+              onClick={() => handleFilterClick('Replied')}
+              className="glass-panel"
+              style={{ 
+                padding: '24px', 
+                cursor: 'pointer',
+                flex: 1,
+                minWidth: '140px',
+                textAlign: 'center',
+                transition: 'all 0.3s ease',
+                borderTop: filter === 'Replied' ? '4px solid #34d399' : '1px solid var(--glass-border)',
+                background: filter === 'Replied' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(255,255,255,0.03)',
+                boxShadow: filter === 'Replied' ? '0 10px 30px rgba(16, 185, 129, 0.2)' : 'none',
+                transform: filter === 'Replied' ? 'translateY(-4px)' : 'translateY(0)'
+              }}
+            >
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '8px' }}>✅ Resolved</div>
+              <div style={{ fontSize: '36px', fontWeight: '800', color: filter === 'Replied' ? '#34d399' : '#fff' }}>{repliedCount}</div>
+            </div>
+
+            <button
+              onClick={fetchQuestions}
+              className="btn-glass"
+              style={{ flexShrink: 0, alignSelf: 'center', height: 'fit-content' }}
+            >
+              🔄 Sync Inbox
+            </button>
           </div>
-        ) : (
-          <div style={{ background: '#fff', borderRadius: '8px', overflow: 'hidden', border: '1px solid #e2e8f0' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0' }}>
-                  <th style={{ padding: '14px 20px', textAlign: 'left', fontSize: '14px', color: '#042e69', fontWeight: '600' }}>Candidate</th>
-                  <th style={{ padding: '14px 20px', textAlign: 'left', fontSize: '14px', color: '#042e69', fontWeight: '600' }}>Question</th>
-                  <th style={{ padding: '14px 20px', textAlign: 'left', fontSize: '14px', color: '#042e69', fontWeight: '600' }}>Status</th>
-                  <th style={{ padding: '14px 20px', textAlign: 'left', fontSize: '14px', color: '#042e69', fontWeight: '600' }}>Asked</th>
-                  <th style={{ padding: '14px 20px', textAlign: 'left', fontSize: '14px', color: '#042e69', fontWeight: '600' }}>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredQuestions.map(q => (
-                  <tr key={q.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                    <td style={{ padding: '14px 20px' }}>
-                      <div style={{ fontWeight: '500', color: '#020a14', fontSize: '14px' }}>
-                        {q.candidate_name || q.candidates?.name || 'Unknown'}
-                      </div>
-                      <div style={{ fontSize: '12px', color: '#020a14' }}>
-                        {q.candidates?.email || q.candidate_email}
-                      </div>
-                      <div style={{ fontSize: '12px', color: '#020a14' }}>
-                        {q.candidates?.domain || 'N/A'}
-                      </div>
-                    </td>
-                    <td style={{ padding: '14px 20px', maxWidth: '320px' }}>
-                      <div style={{ fontSize: '14px', color: '#020a14', lineHeight: '1.4' }}>
-                        {q.question}
-                      </div>
-                      {/* ✅ REMOVED: 💬 1 reply(ies) */}
-                    </td>
-                    <td style={{ padding: '14px 20px' }}>
-                      <span style={{
-                        padding: '4px 12px',
-                        borderRadius: '12px',
-                        fontSize: '12px',
-                        fontWeight: '600',
-                        background: q.status === 'Replied' ? '#dcfce7' : '#fef3c7',
-                        color: q.status === 'Replied' ? '#166534' : '#92400e'
-                      }}>
-                        {q.status === 'Replied' ? ' Replied' : ' Pending'}
-                      </span>
-                    </td>
-                    <td style={{ padding: '14px 20px', fontSize: '13px', color: '#020a14' }}>
-                      {new Date(q.created_at).toLocaleString()}
-                    </td>
-                    <td style={{ padding: '14px 20px' }}>
-                      <button
-                        onClick={() => navigate(`/candidate/${q.candidate_id}`)}
-                        style={{
-                          padding: '6px 14px',
-                          background: '#2563eb',
-                          color: '#fff',
-                          border: 'none',
-                          borderRadius: '4px',
-                          cursor: 'pointer',
-                          fontSize: '13px',
-                          fontWeight: '500'
-                        }}
-                      >
-                        View Candidate
-                      </button>
-                    </td>
+
+          {/* Search and Filter */}
+          <div className="glass-panel animate-fade-up delay-200" style={{ display: 'flex', gap: '16px', marginBottom: '32px', padding: '16px 24px', flexWrap: 'wrap' }}>
+            <div style={{ flex: 1, minWidth: '200px' }}>
+              <input
+                type="text"
+                placeholder="Search candidate or query payload..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                style={inputStyle}
+              />
+            </div>
+            <select 
+              value={filter} 
+              onChange={(e) => setFilter(e.target.value)}
+              style={{ ...inputStyle, width: '200px', cursor: 'pointer', color: '#000' }}
+            >
+              <option value="all">All Queries</option>
+              <option value="Pending">⏳ Actionable</option>
+              <option value="Replied">✅ Resolved</option>
+            </select>
+          </div>
+
+          {/* Questions Table */}
+          {loading ? (
+            <div style={{ padding: '60px', textAlign: 'center' }}>
+              <div style={{ width: '40px', height: '40px', border: '4px solid rgba(255,255,255,0.1)', borderTop: '4px solid var(--primary)', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 16px' }} />
+              <p style={{ color: 'var(--text-muted)' }}>Decrypting inbox payload...</p>
+            </div>
+          ) : filteredQuestions.length === 0 ? (
+            <div className="glass-panel animate-fade-up delay-300" style={{ textAlign: 'center', padding: '60px' }}>
+              <p style={{ color: 'var(--text-muted)', fontSize: '16px' }}>📭 Inbox zero. No queries match current parameters.</p>
+            </div>
+          ) : (
+            <div className="glass-panel animate-fade-up delay-300" style={{ overflow: 'hidden', padding: 0 }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                <thead>
+                  <tr style={{ background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid var(--glass-border)' }}>
+                    <th style={{ padding: '20px 24px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '1px' }}>Candidate</th>
+                    <th style={{ padding: '20px 24px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '1px' }}>Query Payload</th>
+                    <th style={{ padding: '20px 24px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '1px' }}>Status</th>
+                    <th style={{ padding: '20px 24px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '1px' }}>Timestamp</th>
+                    <th style={{ padding: '20px 24px', fontSize: '13px', color: 'var(--text-muted)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '1px' }}>Action</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+                </thead>
+                <tbody>
+                  {filteredQuestions.map((q, index) => (
+                    <tr key={q.id} style={{ borderBottom: '1px solid var(--glass-border)', background: index % 2 === 0 ? 'rgba(255,255,255,0.01)' : 'transparent', transition: 'background 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.04)'} onMouseLeave={(e) => e.currentTarget.style.background = index % 2 === 0 ? 'rgba(255,255,255,0.01)' : 'transparent'}>
+                      <td style={{ padding: '20px 24px' }}>
+                        <div style={{ fontWeight: '600', color: '#fff', fontSize: '15px', marginBottom: '4px' }}>
+                          {q.candidate_name || q.candidates?.name || 'Unknown'}
+                        </div>
+                        <div style={{ fontSize: '13px', color: 'var(--primary)' }}>
+                          {q.candidates?.email || q.candidate_email}
+                        </div>
+                        <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                          {q.candidates?.domain || 'N/A'}
+                        </div>
+                      </td>
+                      <td style={{ padding: '20px 24px', maxWidth: '320px' }}>
+                        <div style={{ fontSize: '14px', color: '#e2e8f0', lineHeight: '1.6' }}>
+                          {q.question}
+                        </div>
+                      </td>
+                      <td style={{ padding: '20px 24px' }}>
+                        <span style={{
+                          padding: '6px 14px',
+                          borderRadius: '20px',
+                          fontSize: '11px',
+                          fontWeight: '700',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px',
+                          background: q.status === 'Replied' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(245, 158, 11, 0.15)',
+                          color: q.status === 'Replied' ? '#34d399' : '#fbbf24',
+                          border: `1px solid ${q.status === 'Replied' ? 'rgba(16, 185, 129, 0.3)' : 'rgba(245, 158, 11, 0.3)'}`
+                        }}>
+                          {q.status === 'Replied' ? 'Resolved' : 'Actionable'}
+                        </span>
+                      </td>
+                      <td style={{ padding: '20px 24px', fontSize: '13px', color: 'var(--text-muted)' }}>
+                        {new Date(q.created_at).toLocaleString()}
+                      </td>
+                      <td style={{ padding: '20px 24px' }}>
+                        <button
+                          onClick={() => navigate(`/candidate/${q.candidate_id}`)}
+                          className="btn-premium"
+                          style={{ padding: '8px 16px', fontSize: '12px' }}
+                        >
+                          Access Profile
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 

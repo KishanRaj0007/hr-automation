@@ -1,3 +1,4 @@
+// src/components/HRAdminAnalytics.jsx
 import { useEffect, useState, useMemo } from 'react';
 import { supabase } from '../services/supabase';
 import { useNavigate } from 'react-router-dom';
@@ -457,23 +458,10 @@ function HRAdminAnalytics() {
 
   if (loading && activeTab === 'overview') {
     return (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        minHeight: '100vh' 
-      }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{
-            width: '50px',
-            height: '50px',
-            border: '4px solid #e2e8f0',
-            borderTop: '4px solid #2563eb',
-            borderRadius: '50%',
-            animation: 'spin 1s linear infinite',
-            margin: '0 auto 16px'
-          }} />
-          <h3 style={{ color: '#334155' }}>Loading Analytics...</h3>
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-dark)' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
+          <div style={{ width: '40px', height: '40px', border: '4px solid rgba(255, 255, 255, 0.1)', borderTop: '4px solid var(--primary)', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+          <p style={{ color: 'var(--text-muted)', fontSize: '14px', fontWeight: '500' }}>Loading Analytics...</p>
           <style>{`
             @keyframes spin {
               0% { transform: rotate(0deg); }
@@ -486,476 +474,408 @@ function HRAdminAnalytics() {
   }
 
   return (
-    <div style={{ 
-      minHeight: '100vh', 
-      backgroundColor: '#f8fafc', 
-      padding: '30px 40px', 
-      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' 
-    }}>
-      
-      {/* Header */}
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center', 
-        marginBottom: '24px',
-        flexWrap: 'wrap',
-        gap: '12px'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <button 
-            onClick={() => navigate('/')}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: '#2563eb',
-              cursor: 'pointer',
-              fontWeight: '600',
-              fontSize: '14px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px'
-            }}
-          >
-            ← Back to Dashboard
-          </button>
-          <h1 style={{ margin: 0, color: '#0f172a', fontSize: '28px', fontWeight: '700' }}>
-            📊 Analytics
-          </h1>
-        </div>
+    <>
+      <div className="aurora-bg" style={{ opacity: 0.4 }}></div>
+      <div style={{ minHeight: '100vh', padding: '40px 60px', fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif", position: 'relative', zIndex: 1 }}>
         
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-          {/* User Info */}
-          <div style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: '8px',
-            padding: '4px 12px 4px 8px',
-            borderRadius: '8px',
-            background: '#fff',
-            border: '1px solid #e2e8f0'
-          }}>
-            <div style={{
-              width: '32px',
-              height: '32px',
-              borderRadius: '50%',
-              background: '#3b82f6',
-              color: '#fff',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '14px',
-              fontWeight: '600'
-            }}>
-              {displayName.charAt(0).toUpperCase()}
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <span style={{ fontSize: '13px', fontWeight: '600', color: '#1e293b' }}>
-                {displayName}
-              </span>
-              <span style={{ fontSize: '10px', color: '#94a3b8', textTransform: 'capitalize' }}>
-                {displayRole.replace('_', ' ')}
-              </span>
-            </div>
-          </div>
-
-          {/* Register Button - Only for HR Lead and Project Manager */}
-          {canRegisterUsers() && (
+        {/* ===== NAVIGATION BAR ===== */}
+        <div className="glass-panel animate-fade-up" style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center', 
+          marginBottom: '30px',
+          padding: '16px 24px',
+        }}>
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
             <button
-              onClick={() => setShowRegisterModal(true)}
+              onClick={() => navigate('/hr-dashboard')}
               style={{
-                padding: '8px 16px',
+                padding: '10px 24px',
                 borderRadius: '8px',
-                border: 'none',
-                background: '#3b82f6',
-                color: '#fff',
+                border: '1px solid transparent',
+                background: 'transparent',
+                color: 'var(--text-muted)',
                 fontWeight: '600',
                 cursor: 'pointer',
-                fontSize: '13px',
+                fontSize: '14px',
                 transition: 'all 0.2s ease',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '6px'
+                gap: '8px'
               }}
-              onMouseEnter={(e) => { e.target.style.background = '#2563eb'; }}
-              onMouseLeave={(e) => { e.target.style.background = '#3b82f6'; }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = '#fff'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; }}
             >
-              <span>➕</span> Register User
+              ← Back to Dashboard
             </button>
-          )}
-
-          {/* Change Password Button - Visible to ALL users */}
-          <button
-            onClick={() => setShowChangePassword(true)}
-            style={{
-              padding: '6px 16px',
-              borderRadius: '6px',
-              border: '1px solid #e2e8f0',
-              background: 'transparent',
-              cursor: 'pointer',
-              fontSize: '13px',
-              color: '#64748b',
-              transition: 'all 0.2s ease',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px'
-            }}
-            onMouseEnter={(e) => { e.target.style.background = '#f1f5f9'; }}
-            onMouseLeave={(e) => { e.target.style.background = 'transparent'; }}
-          >
-            🔑 Change Password
-          </button>
-
-          <button
-            onClick={fetchAllData}
-            style={{
-              padding: '8px 16px',
-              borderRadius: '8px',
-              border: '1px solid #e2e8f0',
-              background: '#fff',
-              color: '#475569',
-              fontSize: '13px',
-              fontWeight: '500',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease'
-            }}
-            onMouseEnter={(e) => e.target.style.background = '#f8fafc'}
-            onMouseLeave={(e) => e.target.style.background = '#fff'}
-          >
-            🔄 Refresh
-          </button>
-
-          <button
-            onClick={handleLogout}
-            style={{
-              padding: '6px 16px',
-              borderRadius: '6px',
-              border: '1px solid #e2e8f0',
-              background: 'transparent',
-              cursor: 'pointer',
-              fontSize: '13px',
-              color: '#64748b',
-              transition: 'all 0.2s ease'
-            }}
-            onMouseEnter={(e) => { e.target.style.background = '#f1f5f9'; }}
-            onMouseLeave={(e) => { e.target.style.background = 'transparent'; }}
-          >
-            Logout
-          </button>
-        </div>
-      </div>
-
-      {/* Registration Success Message */}
-      {registrationSuccess && (
-        <div style={{
-          padding: '12px 20px',
-          borderRadius: '8px',
-          background: '#f0fdf4',
-          border: '1px solid #bbf7d0',
-          color: '#166534',
-          marginBottom: '16px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px'
-        }}>
-          <span style={{ fontSize: '18px' }}>✅</span>
-          {registrationSuccess}
-        </div>
-      )}
-
-      {/* Main Tabs */}
-      <div style={{ 
-        display: 'flex', 
-        gap: '10px', 
-        marginBottom: '24px',
-        borderBottom: '1px solid #e2e8f0',
-        paddingBottom: '12px',
-        flexWrap: 'wrap'
-      }}>
-        <button
-          onClick={() => setActiveTab('overview')}
-          style={{
-            padding: '8px 20px',
-            borderRadius: '8px',
-            border: activeTab === 'overview' ? '2px solid #2563eb' : '1px solid #e2e8f0',
-            background: activeTab === 'overview' ? '#eff6ff' : '#fff',
-            color: activeTab === 'overview' ? '#1d4ed8' : '#4b5563',
-            fontSize: '14px',
-            fontWeight: '600',
-            cursor: 'pointer',
-            transition: 'all 0.2s ease'
-          }}
-        >
-          📊 Stage Analytics
-        </button>
-        <button
-          onClick={() => setActiveTab('performance')}
-          style={{
-            padding: '8px 20px',
-            borderRadius: '8px',
-            border: activeTab === 'performance' ? '2px solid #2563eb' : '1px solid #e2e8f0',
-            background: activeTab === 'performance' ? '#eff6ff' : '#fff',
-            color: activeTab === 'performance' ? '#1d4ed8' : '#4b5563',
-            fontSize: '14px',
-            fontWeight: '600',
-            cursor: 'pointer',
-            transition: 'all 0.2s ease'
-          }}
-        >
-          📊 Team Performance
-        </button>
-        <button
-          onClick={() => setActiveTab('activity')}
-          style={{
-            padding: '8px 20px',
-            borderRadius: '8px',
-            border: activeTab === 'activity' ? '2px solid #8b5cf6' : '1px solid #e2e8f0',
-            background: activeTab === 'activity' ? '#f5f3ff' : '#fff',
-            color: activeTab === 'activity' ? '#6d28d9' : '#4b5563',
-            fontSize: '14px',
-            fontWeight: '600',
-            cursor: 'pointer',
-            transition: 'all 0.2s ease'
-          }}
-        >
-          📋 Activity Log
-          <span style={{
-            fontSize: '10px',
-            background: activeTab === 'activity' ? '#8b5cf6' : '#e2e8f0',
-            color: activeTab === 'activity' ? '#fff' : '#64748b',
-            padding: '1px 8px',
-            borderRadius: '10px',
-            marginLeft: '4px'
-          }}>
-            Live
-          </span>
-        </button>
-        {/* Export Reports Tab */}
-        <button
-          onClick={() => setActiveTab('export')}
-          style={{
-            padding: '8px 20px',
-            borderRadius: '8px',
-            border: activeTab === 'export' ? '2px solid #059669' : '1px solid #e2e8f0',
-            background: activeTab === 'export' ? '#ecfdf5' : '#fff',
-            color: activeTab === 'export' ? '#065f46' : '#4b5563',
-            fontSize: '14px',
-            fontWeight: '600',
-            cursor: 'pointer',
-            transition: 'all 0.2s ease'
-          }}
-        >
-          📤 Export Reports
-        </button>
-      </div>
-
-      {/* ===== STAGE ANALYTICS TAB ===== */}
-      {activeTab === 'overview' && <StageAnalytics />}
-
-      {/* ===== TEAM PERFORMANCE TAB ===== */}
-      {activeTab === 'performance' && (
-        <TeamPerformance />
-      )}
-
-      {/* ===== ACTIVITY LOG TAB ===== */}
-      {activeTab === 'activity' && (
-        <div style={{ marginTop: '10px' }}>
-          <TeamActivityTracker />
-        </div>
-      )}
-
-      {/* ===== EXPORT REPORTS TAB ===== */}
-      {activeTab === 'export' && (
-        <div style={{ 
-          background: '#fff', 
-          padding: '32px', 
-          borderRadius: '12px', 
-          border: '1px solid #e2e8f0',
-          maxWidth: '800px',
-          margin: '0 auto'
-        }}>
-          <h2 style={{ margin: '0 0 8px 0', color: '#0f172a', fontSize: '22px' }}>
-            📤 Export Reports
-          </h2>
-          <p style={{ color: '#64748b', marginBottom: '30px', fontSize: '14px' }}>
-            Export data as CSV files for further analysis
-          </p>
-
-          <div style={{ 
-            display: 'grid', 
-            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
-            gap: '16px' 
-          }}>
-            <button
-              onClick={() => exportReport('candidate')}
-              disabled={exportLoading}
-              style={{
-                padding: '20px',
-                borderRadius: '10px',
-                border: '1px solid #e2e8f0',
-                background: '#fff',
-                cursor: exportLoading ? 'not-allowed' : 'pointer',
-                textAlign: 'center',
-                transition: 'all 0.2s ease',
-                opacity: exportLoading ? 0.7 : 1
-              }}
-              onMouseEnter={(e) => {
-                if (!exportLoading) {
-                  e.target.style.background = '#f8fafc';
-                  e.target.style.borderColor = '#2563eb';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!exportLoading) {
-                  e.target.style.background = '#fff';
-                  e.target.style.borderColor = '#e2e8f0';
-                }
-              }}
-            >
-              <div style={{ fontSize: '32px', marginBottom: '8px' }}>👤</div>
-              <div style={{ fontWeight: '600', color: '#0f172a', fontSize: '14px' }}>
-                Candidate Report
+            <h1 style={{ margin: '0 0 0 16px', color: '#fff', fontSize: '24px', fontWeight: '800', letterSpacing: '-0.5px', borderLeft: '1px solid var(--glass-border)', paddingLeft: '24px' }}>
+              System Analytics
+            </h1>
+          </div>
+          
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            {/* User Info */}
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '12px',
+              padding: '6px 16px 6px 6px',
+              borderRadius: '30px',
+              background: 'rgba(255, 255, 255, 0.05)',
+              border: '1px solid var(--glass-border)'
+            }}>
+              <div style={{
+                width: '32px',
+                height: '32px',
+                borderRadius: '50%',
+                background: 'linear-gradient(135deg, var(--primary), var(--accent))',
+                color: '#fff',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '14px',
+                fontWeight: '700'
+              }}>
+                {displayName.charAt(0).toUpperCase()}
               </div>
-              <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '4px' }}>
-                {candidates.length} candidates
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <span style={{ fontSize: '13px', fontWeight: '600', color: '#fff' }}>
+                  {displayName}
+                </span>
+                <span style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'capitalize' }}>
+                  {displayRole.replace('_', ' ')}
+                </span>
               </div>
+            </div>
+
+            {/* Actions */}
+            {canRegisterUsers() && (
+              <button onClick={() => setShowRegisterModal(true)} className="btn-premium" style={{ padding: '10px 20px', fontSize: '13px' }}>
+                ➕ Register User
+              </button>
+            )}
+
+            <button onClick={() => setShowChangePassword(true)} className="btn-glass" style={{ padding: '10px 20px', fontSize: '13px' }}>
+              🔑 Password
             </button>
 
-            <button
-              onClick={() => exportReport('source')}
-              disabled={exportLoading}
-              style={{
-                padding: '20px',
-                borderRadius: '10px',
-                border: '1px solid #e2e8f0',
-                background: '#fff',
-                cursor: exportLoading ? 'not-allowed' : 'pointer',
-                textAlign: 'center',
-                transition: 'all 0.2s ease',
-                opacity: exportLoading ? 0.7 : 1
-              }}
-              onMouseEnter={(e) => {
-                if (!exportLoading) {
-                  e.target.style.background = '#f8fafc';
-                  e.target.style.borderColor = '#8b5cf6';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!exportLoading) {
-                  e.target.style.background = '#fff';
-                  e.target.style.borderColor = '#e2e8f0';
-                }
-              }}
-            >
-              <div style={{ fontSize: '32px', marginBottom: '8px' }}>📊</div>
-              <div style={{ fontWeight: '600', color: '#0f172a', fontSize: '14px' }}>
-                Source Report
-              </div>
-              <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '4px' }}>
-                {stats.bestSources.length} sources
-              </div>
+            <button onClick={fetchAllData} className="btn-glass" style={{ padding: '10px 20px', fontSize: '13px' }}>
+              🔄 Sync
             </button>
 
-            <button
-              onClick={() => exportReport('interview')}
-              disabled={exportLoading}
-              style={{
-                padding: '20px',
-                borderRadius: '10px',
-                border: '1px solid #e2e8f0',
-                background: '#fff',
-                cursor: exportLoading ? 'not-allowed' : 'pointer',
-                textAlign: 'center',
-                transition: 'all 0.2s ease',
-                opacity: exportLoading ? 0.7 : 1
-              }}
-              onMouseEnter={(e) => {
-                if (!exportLoading) {
-                  e.target.style.background = '#f8fafc';
-                  e.target.style.borderColor = '#059669';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!exportLoading) {
-                  e.target.style.background = '#fff';
-                  e.target.style.borderColor = '#e2e8f0';
-                }
-              }}
-            >
-              <div style={{ fontSize: '32px', marginBottom: '8px' }}>🎯</div>
-              <div style={{ fontWeight: '600', color: '#0f172a', fontSize: '14px' }}>
-                Interview Report
-              </div>
-              <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '4px' }}>
-                {Object.keys(stats.interviewerStats).length} interviewers
-              </div>
-            </button>
-
-            <button
-              onClick={() => exportReport('probation')}
-              disabled={exportLoading}
-              style={{
-                padding: '20px',
-                borderRadius: '10px',
-                border: '1px solid #e2e8f0',
-                background: '#fff',
-                cursor: exportLoading ? 'not-allowed' : 'pointer',
-                textAlign: 'center',
-                transition: 'all 0.2s ease',
-                opacity: exportLoading ? 0.7 : 1
-              }}
-              onMouseEnter={(e) => {
-                if (!exportLoading) {
-                  e.target.style.background = '#f8fafc';
-                  e.target.style.borderColor = '#f59e0b';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!exportLoading) {
-                  e.target.style.background = '#fff';
-                  e.target.style.borderColor = '#e2e8f0';
-                }
-              }}
-            >
-              <div style={{ fontSize: '32px', marginBottom: '8px' }}>📋</div>
-              <div style={{ fontWeight: '600', color: '#0f172a', fontSize: '14px' }}>
-                Probation Report
-              </div>
-              <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '4px' }}>
-                {candidates.filter(c => c.current_stage === 'Probation' || c.current_stage === 'Onboarding Done').length} candidates
-              </div>
+            <button onClick={handleLogout} className="btn-glass" style={{ padding: '10px 20px', fontSize: '13px', color: '#fca5a5', borderColor: 'rgba(239, 68, 68, 0.3)' }}>
+              Logout
             </button>
           </div>
+        </div>
 
-          {exportLoading && (
-            <div style={{ 
-              marginTop: '20px', 
-              padding: '12px', 
-              background: '#eff6ff', 
-              borderRadius: '6px', 
-              textAlign: 'center',
-              color: '#2563eb',
-              fontWeight: '500'
+        {/* Registration Success Message */}
+        {registrationSuccess && (
+          <div className="animate-fade-up" style={{
+            padding: '16px 24px',
+            borderRadius: '12px',
+            background: 'rgba(16, 185, 129, 0.1)',
+            border: '1px solid rgba(16, 185, 129, 0.2)',
+            color: '#6ee7b7',
+            marginBottom: '24px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            backdropFilter: 'blur(10px)'
+          }}>
+            <span style={{ fontSize: '18px' }}>✅</span>
+            {registrationSuccess}
+          </div>
+        )}
+
+        {/* Main Tabs */}
+        <div className="glass-panel animate-fade-up delay-100" style={{ 
+          display: 'flex', 
+          gap: '12px', 
+          marginBottom: '30px',
+          padding: '16px 24px',
+          flexWrap: 'wrap'
+        }}>
+          <button
+            onClick={() => setActiveTab('overview')}
+            className={activeTab === 'overview' ? 'btn-premium' : 'btn-glass'}
+            style={{ padding: '10px 24px', display: 'flex', alignItems: 'center', gap: '8px' }}
+          >
+            📊 Stage Analytics
+          </button>
+          <button
+            onClick={() => setActiveTab('performance')}
+            className={activeTab === 'performance' ? 'btn-premium' : 'btn-glass'}
+            style={{ padding: '10px 24px', display: 'flex', alignItems: 'center', gap: '8px' }}
+          >
+            👥 Team Performance
+          </button>
+          <button
+            onClick={() => setActiveTab('activity')}
+            className={activeTab === 'activity' ? 'btn-premium' : 'btn-glass'}
+            style={{ padding: '10px 24px', display: 'flex', alignItems: 'center', gap: '8px' }}
+          >
+            📋 Activity Log
+            <span style={{
+              fontSize: '10px',
+              background: activeTab === 'activity' ? '#fff' : 'rgba(255,255,255,0.1)',
+              color: activeTab === 'activity' ? 'var(--primary)' : '#fff',
+              padding: '2px 8px',
+              borderRadius: '10px',
+              marginLeft: '4px',
+              fontWeight: '800'
             }}>
-              ⏳ Generating report...
+              Live
+            </span>
+          </button>
+          
+          <div style={{ width: '1px', background: 'var(--glass-border)', margin: '0 8px' }}></div>
+
+          {/* Export Reports Tab */}
+          <button
+            onClick={() => setActiveTab('export')}
+            className={activeTab === 'export' ? 'btn-premium' : 'btn-glass'}
+            style={{ 
+              padding: '10px 24px', 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '8px',
+              background: activeTab === 'export' ? 'linear-gradient(135deg, #10b981, #059669)' : 'rgba(255,255,255,0.05)',
+              borderColor: activeTab === 'export' ? 'transparent' : 'var(--glass-border)'
+            }}
+          >
+            📤 Export Center
+          </button>
+        </div>
+
+        {/* ===== TAB RENDERERS ===== */}
+        
+        {/* Child Components will render here. They might currently be light-mode, 
+            but this wrapper ensures the page structure remains premium. */}
+        <div className="animate-fade-up delay-200">
+          {activeTab === 'overview' && <StageAnalytics />}
+          
+          {activeTab === 'performance' && <TeamPerformance />}
+          
+          {activeTab === 'activity' && <TeamActivityTracker />}
+
+          {/* ===== EXPORT REPORTS TAB ===== */}
+          {activeTab === 'export' && (
+            <div className="glass-panel" style={{ 
+              padding: '40px', 
+              maxWidth: '800px',
+              margin: '0 auto',
+              textAlign: 'center'
+            }}>
+              <h2 style={{ margin: '0 0 12px 0', color: '#fff', fontSize: '24px', fontWeight: '800', letterSpacing: '-0.5px' }}>
+                Data Export Center
+              </h2>
+              <p style={{ color: 'var(--text-muted)', marginBottom: '40px', fontSize: '15px' }}>
+                Securely generate and download CSV reports for external auditing.
+              </p>
+
+              <div style={{ 
+                display: 'grid', 
+                gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', 
+                gap: '20px' 
+              }}>
+                <button
+                  onClick={() => exportReport('candidate')}
+                  disabled={exportLoading}
+                  style={{
+                    padding: '30px 20px',
+                    borderRadius: '16px',
+                    border: '1px solid var(--glass-border)',
+                    background: 'rgba(255, 255, 255, 0.03)',
+                    cursor: exportLoading ? 'not-allowed' : 'pointer',
+                    textAlign: 'center',
+                    transition: 'all 0.3s ease',
+                    opacity: exportLoading ? 0.7 : 1,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!exportLoading) {
+                      e.currentTarget.style.background = 'rgba(59, 130, 246, 0.1)';
+                      e.currentTarget.style.borderColor = 'var(--primary)';
+                      e.currentTarget.style.transform = 'translateY(-4px)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!exportLoading) {
+                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)';
+                      e.currentTarget.style.borderColor = 'var(--glass-border)';
+                      e.currentTarget.style.transform = 'translateY(0)';
+                    }
+                  }}
+                >
+                  <div style={{ fontSize: '36px', marginBottom: '16px' }}>👥</div>
+                  <div style={{ fontWeight: '700', color: '#fff', fontSize: '16px', marginBottom: '8px' }}>
+                    Candidate Report
+                  </div>
+                  <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+                    {candidates.length} records
+                  </div>
+                </button>
+
+                <button
+                  onClick={() => exportReport('source')}
+                  disabled={exportLoading}
+                  style={{
+                    padding: '30px 20px',
+                    borderRadius: '16px',
+                    border: '1px solid var(--glass-border)',
+                    background: 'rgba(255, 255, 255, 0.03)',
+                    cursor: exportLoading ? 'not-allowed' : 'pointer',
+                    textAlign: 'center',
+                    transition: 'all 0.3s ease',
+                    opacity: exportLoading ? 0.7 : 1,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!exportLoading) {
+                      e.currentTarget.style.background = 'rgba(139, 92, 246, 0.1)';
+                      e.currentTarget.style.borderColor = 'var(--accent)';
+                      e.currentTarget.style.transform = 'translateY(-4px)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!exportLoading) {
+                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)';
+                      e.currentTarget.style.borderColor = 'var(--glass-border)';
+                      e.currentTarget.style.transform = 'translateY(0)';
+                    }
+                  }}
+                >
+                  <div style={{ fontSize: '36px', marginBottom: '16px' }}>📊</div>
+                  <div style={{ fontWeight: '700', color: '#fff', fontSize: '16px', marginBottom: '8px' }}>
+                    Source Matrix
+                  </div>
+                  <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+                    {stats.bestSources.length} channels
+                  </div>
+                </button>
+
+                <button
+                  onClick={() => exportReport('interview')}
+                  disabled={exportLoading}
+                  style={{
+                    padding: '30px 20px',
+                    borderRadius: '16px',
+                    border: '1px solid var(--glass-border)',
+                    background: 'rgba(255, 255, 255, 0.03)',
+                    cursor: exportLoading ? 'not-allowed' : 'pointer',
+                    textAlign: 'center',
+                    transition: 'all 0.3s ease',
+                    opacity: exportLoading ? 0.7 : 1,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!exportLoading) {
+                      e.currentTarget.style.background = 'rgba(16, 185, 129, 0.1)';
+                      e.currentTarget.style.borderColor = '#10b981';
+                      e.currentTarget.style.transform = 'translateY(-4px)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!exportLoading) {
+                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)';
+                      e.currentTarget.style.borderColor = 'var(--glass-border)';
+                      e.currentTarget.style.transform = 'translateY(0)';
+                    }
+                  }}
+                >
+                  <div style={{ fontSize: '36px', marginBottom: '16px' }}>🎯</div>
+                  <div style={{ fontWeight: '700', color: '#fff', fontSize: '16px', marginBottom: '8px' }}>
+                    Interview Audit
+                  </div>
+                  <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+                    {Object.keys(stats.interviewerStats).length} panelists
+                  </div>
+                </button>
+
+                <button
+                  onClick={() => exportReport('probation')}
+                  disabled={exportLoading}
+                  style={{
+                    padding: '30px 20px',
+                    borderRadius: '16px',
+                    border: '1px solid var(--glass-border)',
+                    background: 'rgba(255, 255, 255, 0.03)',
+                    cursor: exportLoading ? 'not-allowed' : 'pointer',
+                    textAlign: 'center',
+                    transition: 'all 0.3s ease',
+                    opacity: exportLoading ? 0.7 : 1,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!exportLoading) {
+                      e.currentTarget.style.background = 'rgba(245, 158, 11, 0.1)';
+                      e.currentTarget.style.borderColor = '#f59e0b';
+                      e.currentTarget.style.transform = 'translateY(-4px)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!exportLoading) {
+                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)';
+                      e.currentTarget.style.borderColor = 'var(--glass-border)';
+                      e.currentTarget.style.transform = 'translateY(0)';
+                    }
+                  }}
+                >
+                  <div style={{ fontSize: '36px', marginBottom: '16px' }}>📋</div>
+                  <div style={{ fontWeight: '700', color: '#fff', fontSize: '16px', marginBottom: '8px' }}>
+                    Probation Cohort
+                  </div>
+                  <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+                    {candidates.filter(c => c.current_stage === 'Probation' || c.current_stage === 'Onboarding Done').length} active
+                  </div>
+                </button>
+              </div>
+
+              {exportLoading && (
+                <div style={{ 
+                  marginTop: '24px', 
+                  padding: '16px', 
+                  background: 'rgba(59, 130, 246, 0.1)', 
+                  border: '1px solid var(--primary)',
+                  borderRadius: '8px', 
+                  textAlign: 'center',
+                  color: '#60a5fa',
+                  fontWeight: '600',
+                  backdropFilter: 'blur(10px)'
+                }}>
+                  ⏳ Compiling cryptographically secure payload...
+                </div>
+              )}
             </div>
           )}
         </div>
-      )}
 
-      {/* Register User Modal */}
-      {showRegisterModal && (
-        <RegisterUser 
-          onClose={() => setShowRegisterModal(false)}
-          onSuccess={handleRegistrationSuccess}
-        />
-      )}
+        {/* Modals */}
+        {showRegisterModal && (
+          <RegisterUser 
+            onClose={() => setShowRegisterModal(false)}
+            onSuccess={handleRegistrationSuccess}
+          />
+        )}
 
-      {/* Change Password Modal */}
-      {showChangePassword && (
-        <ChangePasswordModal onClose={() => setShowChangePassword(false)} />
-      )}
-    </div>
+        {showChangePassword && (
+          <ChangePasswordModal onClose={() => setShowChangePassword(false)} />
+        )}
+      </div>
+    </>
   );
 }
 

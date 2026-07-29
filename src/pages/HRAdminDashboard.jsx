@@ -1,3 +1,4 @@
+// src/pages/HRAdminDashboard.jsx
 import { useEffect, useState } from 'react';
 import { supabase } from '../services/supabase';
 import { useNavigate } from 'react-router-dom';
@@ -33,36 +34,20 @@ function HRAdminDashboard() {
     terminated: 0
   });
 
-  // Color mapping for each stage
+  // Color mapping for each stage (Adapted for Dark Mode)
   const stageColors = {
-    'Applied': '#4b5563',
-    'Assignment': '#f59e0b',
-    'Interview': '#a855f7',
-    'On Hold': '#fbbf24',
-    'Selected': '#6366f1',
-    'Probation': '#3b82f6',
-    'Onboarding Done': '#10b981',
-    'Waitlist': '#8b5cf6',
-    'Withdrawn': '#8b5cf6',
-    'Internship Discontinued': '#f97316',
-    'Terminated': '#dc2626',
-    'Rejected': '#ef4444'
-  };
-
-  // Background color for each stage when filtered
-  const stageBgColors = {
-    'Applied': '#f8fafc',
-    'Assignment': '#fffbeb',
-    'Interview': '#f5f3ff',
-    'On Hold': '#fffbeb',
-    'Selected': '#eff6ff',
-    'Probation': '#eff6ff',
-    'Onboarding Done': '#f0fdf4',
-    'Waitlist': '#f5f3ff',
-    'Withdrawn': '#f5f3ff',
-    'Internship Discontinued': '#fffbeb',
-    'Terminated': '#fef2f2',
-    'Rejected': '#fef2f2'
+    'Applied': '#94a3b8',
+    'Assignment': '#fbbf24',
+    'Interview': '#c084fc',
+    'On Hold': '#fcd34d',
+    'Selected': '#818cf8',
+    'Probation': '#60a5fa',
+    'Onboarding Done': '#34d399',
+    'Waitlist': '#a78bfa',
+    'Withdrawn': '#a78bfa',
+    'Internship Discontinued': '#fb923c',
+    'Terminated': '#f87171',
+    'Rejected': '#f87171'
   };
 
   useEffect(() => {
@@ -138,461 +123,337 @@ function HRAdminDashboard() {
     setTimeout(() => setRegistrationSuccess(null), 5000);
   };
 
-  if (loading) return <h3 style={{ padding: '30px', fontFamily: 'sans-serif', color: '#334155' }}>Loading Funnel Workspace...</h3>;
+  if (loading) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-dark)' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
+          <div style={{ width: '40px', height: '40px', border: '4px solid rgba(255, 255, 255, 0.1)', borderTop: '4px solid var(--primary)', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+          <p style={{ color: 'var(--text-muted)', fontSize: '14px', fontWeight: '500' }}>Loading Workspace...</p>
+        </div>
+      </div>
+    );
+  }
 
   // KPI Data - WITHOUT TOTAL
   const kpiData = [
-    { label: 'APPLIED', count: metrics.applied, color: '#4b5563', filterValue: 'Applied' },
-    { label: 'ASSIGNMENT', count: metrics.assignment, color: '#f59e0b', filterValue: 'Assignment' },
-    { label: 'INTERVIEW', count: metrics.interview, color: '#a855f7', filterValue: 'Interview' },
-    { label: 'ON HOLD', count: metrics['on hold'], color: '#fbbf24', filterValue: 'On Hold' },
-    { label: 'SELECTED', count: metrics.selected, color: '#6366f1', filterValue: 'Selected' },
-    { label: 'PROBATION', count: metrics.probation, color: '#3b82f6', filterValue: 'Probation' },
-    { label: 'ONBOARDING', count: metrics['onboarding done'], color: '#10b981', filterValue: 'Onboarding Done' },
-    { label: 'WAITLIST', count: metrics.waitlist, color: '#8b5cf6', filterValue: 'Waitlist' },
-    { label: 'WITHDRAWN', count: metrics.withdrawn, color: '#8b5cf6', filterValue: 'Withdrawn' },
-    { label: 'INTERNSHIP DISCONTINUED', count: metrics['internship discontinued'], color: '#f97316', filterValue: 'Internship Discontinued' },
-    { label: 'TERMINATED', count: metrics.terminated, color: '#dc2626', filterValue: 'Terminated' },
-    { label: 'REJECTED', count: metrics.rejected, color: '#ef4444', filterValue: 'Rejected' }
+    { label: 'APPLIED', count: metrics.applied, color: '#94a3b8', filterValue: 'Applied' },
+    { label: 'ASSIGNMENT', count: metrics.assignment, color: '#fbbf24', filterValue: 'Assignment' },
+    { label: 'INTERVIEW', count: metrics.interview, color: '#c084fc', filterValue: 'Interview' },
+    { label: 'ON HOLD', count: metrics['on hold'], color: '#fcd34d', filterValue: 'On Hold' },
+    { label: 'SELECTED', count: metrics.selected, color: '#818cf8', filterValue: 'Selected' },
+    { label: 'PROBATION', count: metrics.probation, color: '#60a5fa', filterValue: 'Probation' },
+    { label: 'ONBOARDING', count: metrics['onboarding done'], color: '#34d399', filterValue: 'Onboarding Done' },
+    { label: 'WAITLIST', count: metrics.waitlist, color: '#a78bfa', filterValue: 'Waitlist' },
+    { label: 'WITHDRAWN', count: metrics.withdrawn, color: '#a78bfa', filterValue: 'Withdrawn' },
+    { label: 'DISCONTINUED', count: metrics['internship discontinued'], color: '#fb923c', filterValue: 'Internship Discontinued' },
+    { label: 'TERMINATED', count: metrics.terminated, color: '#f87171', filterValue: 'Terminated' },
+    { label: 'REJECTED', count: metrics.rejected, color: '#f87171', filterValue: 'Rejected' }
   ];
 
   // Get user name from AuthContext
   const displayName = userName || user?.name || localStorage.getItem('userName') || 'HR User';
   const displayRole = userRole || localStorage.getItem('userRole') || 'team_member';
 
-  return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#fcfcfd', padding: '40px 60px', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
-      
-      {/* ===== NAVIGATION BAR ===== */}
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center', 
-        marginBottom: '20px',
-        padding: '12px 20px',
-        background: '#fff',
-        borderRadius: '12px',
-        border: '1px solid #e2e8f0',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
-      }}>
-        <div style={{ display: 'flex', gap: '10px' }}>
-          <button
-            onClick={() => navigate('/')}
-            style={{
-              padding: '8px 20px',
-              borderRadius: '8px',
-              border: window.location.pathname === '/' ? '2px solid #2563eb' : '1px solid #e2e8f0',
-              background: window.location.pathname === '/' ? '#eff6ff' : '#fff',
-              color: window.location.pathname === '/' ? '#1d4ed8' : '#64748b',
-              fontWeight: '600',
-              cursor: 'pointer',
-              fontSize: '14px',
-              transition: 'all 0.2s ease'
-            }}
-            onMouseEnter={(e) => {
-              if (window.location.pathname !== '/') {
-                e.target.style.background = '#f8fafc';
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (window.location.pathname !== '/') {
-                e.target.style.background = '#fff';
-              }
-            }}
-          >
-            📊 Dashboard
-          </button>
-          <button
-            onClick={() => navigate('/analytics')}
-            style={{
-              padding: '8px 20px',
-              borderRadius: '8px',
-              border: window.location.pathname === '/analytics' ? '2px solid #2563eb' : '1px solid #e2e8f0',
-              background: window.location.pathname === '/analytics' ? '#eff6ff' : '#fff',
-              color: window.location.pathname === '/analytics' ? '#1d4ed8' : '#64748b',
-              fontWeight: '600',
-              cursor: 'pointer',
-              fontSize: '14px',
-              transition: 'all 0.2s ease'
-            }}
-            onMouseEnter={(e) => {
-              if (window.location.pathname !== '/analytics') {
-                e.target.style.background = '#f8fafc';
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (window.location.pathname !== '/analytics') {
-                e.target.style.background = '#fff';
-              }
-            }}
-          >
-            📈 Analytics
-          </button>
-        </div>
-        
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          {/* User Info */}
-          <div style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: '8px',
-            padding: '4px 12px 4px 8px',
-            borderRadius: '8px',
-            background: '#f8fafc',
-            border: '1px solid #e2e8f0'
-          }}>
-            <div style={{
-              width: '32px',
-              height: '32px',
-              borderRadius: '50%',
-              background: '#3b82f6',
-              color: '#fff',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '14px',
-              fontWeight: '600'
-            }}>
-              {displayName.charAt(0).toUpperCase()}
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-              <span style={{ fontSize: '13px', fontWeight: '600', color: '#1e293b' }}>
-                {displayName}
-              </span>
-              <span style={{ fontSize: '10px', color: '#94a3b8', textTransform: 'capitalize' }}>
-                {displayRole.replace('_', ' ')}
-              </span>
-            </div>
-          </div>
+  // Common input styling
+  const inputStyle = {
+    padding: '10px 16px',
+    borderRadius: '8px',
+    border: '1px solid var(--glass-border)',
+    background: 'rgba(255, 255, 255, 0.05)',
+    color: '#fff',
+    fontSize: '14px',
+    outline: 'none',
+    transition: 'all 0.2s'
+  };
 
-          {/* Register Button - Only for HR Lead and Project Manager */}
-          {canRegisterUsers() && (
+  return (
+    <>
+      <div className="aurora-bg" style={{ opacity: 0.4 }}></div>
+      <div style={{ minHeight: '100vh', padding: '40px 60px', fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif", position: 'relative', zIndex: 1 }}>
+        
+        {/* ===== NAVIGATION BAR ===== */}
+        <div className="glass-panel animate-fade-up" style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center', 
+          marginBottom: '30px',
+          padding: '16px 24px',
+        }}>
+          <div style={{ display: 'flex', gap: '12px' }}>
             <button
-              onClick={() => setShowRegisterModal(true)}
+              onClick={() => navigate('/')}
               style={{
-                padding: '8px 16px',
+                padding: '10px 24px',
                 borderRadius: '8px',
-                border: 'none',
-                background: '#3b82f6',
-                color: '#fff',
+                border: window.location.pathname === '/' ? '1px solid var(--primary)' : '1px solid transparent',
+                background: window.location.pathname === '/' ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
+                color: window.location.pathname === '/' ? '#60a5fa' : 'var(--text-muted)',
                 fontWeight: '600',
                 cursor: 'pointer',
-                fontSize: '13px',
-                transition: 'all 0.2s ease',
+                fontSize: '14px',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              📊 Dashboard
+            </button>
+            <button
+              onClick={() => navigate('/analytics')}
+              style={{
+                padding: '10px 24px',
+                borderRadius: '8px',
+                border: window.location.pathname === '/analytics' ? '1px solid var(--primary)' : '1px solid transparent',
+                background: window.location.pathname === '/analytics' ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
+                color: window.location.pathname === '/analytics' ? '#60a5fa' : 'var(--text-muted)',
+                fontWeight: '600',
+                cursor: 'pointer',
+                fontSize: '14px',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              📈 Analytics
+            </button>
+          </div>
+          
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            {/* User Info */}
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '12px',
+              padding: '6px 16px 6px 6px',
+              borderRadius: '30px',
+              background: 'rgba(255, 255, 255, 0.05)',
+              border: '1px solid var(--glass-border)'
+            }}>
+              <div style={{
+                width: '32px',
+                height: '32px',
+                borderRadius: '50%',
+                background: 'linear-gradient(135deg, var(--primary), var(--accent))',
+                color: '#fff',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '6px'
-              }}
-              onMouseEnter={(e) => { e.target.style.background = '#2563eb'; }}
-              onMouseLeave={(e) => { e.target.style.background = '#3b82f6'; }}
-            >
-              <span>➕</span> Register User
+                justifyContent: 'center',
+                fontSize: '14px',
+                fontWeight: '700'
+              }}>
+                {displayName.charAt(0).toUpperCase()}
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <span style={{ fontSize: '13px', fontWeight: '600', color: '#fff' }}>
+                  {displayName}
+                </span>
+                <span style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'capitalize' }}>
+                  {displayRole.replace('_', ' ')}
+                </span>
+              </div>
+            </div>
+
+            {/* Actions */}
+            {canRegisterUsers() && (
+              <button onClick={() => setShowRegisterModal(true)} className="btn-premium" style={{ padding: '10px 20px', fontSize: '13px' }}>
+                ➕ Register User
+              </button>
+            )}
+
+            <button onClick={() => setShowChangePassword(true)} className="btn-glass" style={{ padding: '10px 20px', fontSize: '13px' }}>
+              🔑 Password
             </button>
-          )}
 
-          {/* Change Password Button - Visible to ALL users */}
-          <button
-            onClick={() => setShowChangePassword(true)}
-            style={{
-              padding: '6px 16px',
-              borderRadius: '6px',
-              border: '1px solid #e2e8f0',
-              background: 'transparent',
-              cursor: 'pointer',
-              fontSize: '13px',
-              color: '#64748b',
-              transition: 'all 0.2s ease',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px'
-            }}
-            onMouseEnter={(e) => { e.target.style.background = '#f1f5f9'; }}
-            onMouseLeave={(e) => { e.target.style.background = 'transparent'; }}
-          >
-            🔑 Change Password
-          </button>
-
-          <button
-            onClick={handleLogout}
-            style={{
-              padding: '6px 16px',
-              borderRadius: '6px',
-              border: '1px solid #e2e8f0',
-              background: 'transparent',
-              cursor: 'pointer',
-              fontSize: '13px',
-              color: '#64748b',
-              transition: 'all 0.2s ease'
-            }}
-            onMouseEnter={(e) => { e.target.style.background = '#f1f5f9'; }}
-            onMouseLeave={(e) => { e.target.style.background = 'transparent'; }}
-          >
-            Logout
-          </button>
-        </div>
-      </div>
-
-      {/* Registration Success Message */}
-      {registrationSuccess && (
-        <div style={{
-          padding: '12px 20px',
-          borderRadius: '8px',
-          background: '#f0fdf4',
-          border: '1px solid #bbf7d0',
-          color: '#166534',
-          marginBottom: '16px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px'
-        }}>
-          <span style={{ fontSize: '18px' }}>✅</span>
-          {registrationSuccess}
-        </div>
-      )}
-
-      <h1 style={{ color: '#0f1e36', marginBottom: '30px', fontWeight: '800', fontSize: '56px', textAlign: 'center', letterSpacing: '-1px', lineHeight: '1.2' }}>
-        HR Funnel Dashboard
-      </h1>
-      
-      {/* KPI Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '14px', marginBottom: '30px' }}>
-        {kpiData.map(m => (
-          <div 
-            key={m.label} 
-            onClick={() => setStageFilter(m.filterValue)} 
-            style={{ 
-              background: '#fff', 
-              padding: '18px 12px', 
-              borderRadius: '16px', 
-              boxShadow: stageFilter === m.filterValue ? '0 4px 14px rgba(37, 99, 235, 0.12)' : '0 4px 20px rgba(0, 0, 0, 0.02)', 
-              borderTop: `4px solid ${m.color}`, 
-              cursor: 'pointer', 
-              textAlign: 'center',
-              transform: stageFilter === m.filterValue ? 'scale(1.03)' : 'scale(1)',
-              transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-              borderLeft: '1px solid #f3f4f6', 
-              borderRight: '1px solid #f3f4f6', 
-              borderBottom: '1px solid #f3f4f6',
-              position: 'relative',
-              minHeight: '80px',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'center',
-              alignItems: 'center'
-            }}
-          >
-            <div style={{ fontSize: '12px', color: '#718096', fontWeight: '700', letterSpacing: '0.5px', marginBottom: '6px' }}>{m.label}</div>
-            <div style={{ fontSize: '32px', fontWeight: '800', color: '#0f172a' }}>{m.count}</div>
+            <button onClick={handleLogout} className="btn-glass" style={{ padding: '10px 20px', fontSize: '13px', color: '#fca5a5', borderColor: 'rgba(239, 68, 68, 0.3)' }}>
+              Logout
+            </button>
           </div>
-        ))}
-      </div>
+        </div>
 
-      {/* Filter Row */}
-      <div style={{ 
-        display: 'flex', 
-        gap: '12px', 
-        marginBottom: '30px', 
-        flexWrap: 'nowrap', 
-        alignItems: 'center',
-        background: '#fff',
-        padding: '8px 16px',
-        borderRadius: '12px',
-        border: '1px solid #e5e7eb',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
-      }}>
-        {/* Search */}
-        <input 
-          type="text" 
-          placeholder="Search candidate..." 
-          value={search} 
-          onChange={(e) => setSearch(e.target.value)} 
-          style={{ 
-            padding: '10px 16px', 
-            borderRadius: '8px', 
-            border: '1px solid #e5e7eb', 
-            background: '#f8fafc', 
-            color: '#1e293b', 
-            flex: 1,
-            minWidth: '180px',
-            fontSize: '14px', 
-            outline: 'none',
-            transition: 'border-color 0.2s'
-          }}
-          onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
-          onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
-        />
-        
-        {/* All Domains Dropdown */}
-        <select 
-          value={domainFilter} 
-          onChange={(e) => setDomainFilter(e.target.value)} 
-          style={{ 
-            padding: '10px 16px', 
-            borderRadius: '8px', 
-            border: '1px solid #e5e7eb', 
-            fontSize: '14px', 
-            background: '#f8fafc', 
-            color: '#1e293b', 
-            minWidth: '160px',
-            outline: 'none', 
-            cursor: 'pointer',
-            transition: 'border-color 0.2s'
-          }}
-          onFocus={(e) => e.target.style.borderColor = '#3b82f6'}
-          onBlur={(e) => e.target.style.borderColor = '#e5e7eb'}
-        >
-          <option value="">All Domains</option>
-          {uniqueDomains.map(d => <option key={d} value={d}>{d}</option>)}
-        </select>
-
-        {/* Total Button */}
-        <button
-          onClick={() => setStageFilter('')}
-          style={{
-            padding: '10px 20px',
-            borderRadius: '8px',
-            border: stageFilter === '' ? '2px solid #3b82f6' : '1px solid #e5e7eb',
-            background: stageFilter === '' ? '#eff6ff' : '#f8fafc',
-            color: stageFilter === '' ? '#1d4ed8' : '#4b5563',
-            fontSize: '14px',
-            fontWeight: '600',
-            cursor: 'pointer',
-            transition: 'all 0.2s ease',
-            whiteSpace: 'nowrap',
-            minWidth: '100px'
-          }}
-        >
-          Total ({metrics.total})
-        </button>
-
-        {/* View All Questions Button */}
-        <button 
-          onClick={() => navigate('/questions')}
-          style={{ 
-            padding: '10px 20px', 
-            borderRadius: '8px', 
-            border: '1px solid #e5e7eb',
-            background: '#8b5cf6', 
-            color: '#fff', 
-            fontSize: '14px', 
-            fontWeight: '600', 
-            cursor: 'pointer',
-            transition: 'all 0.2s ease',
-            whiteSpace: 'nowrap'
-          }}
-          onMouseEnter={(e) => { e.target.style.background = '#7c3aed'; }}
-          onMouseLeave={(e) => { e.target.style.background = '#8b5cf6'; }}
-        >
-          💬 View All Questions
-        </button>
-
-        {/* Refresh Button */}
-        <button 
-          onClick={() => fetchDashboardData()}
-          style={{ 
-            padding: '10px 14px', 
-            borderRadius: '8px', 
-            border: '1px solid #e5e7eb',
-            background: '#f8fafc', 
-            color: '#475569', 
-            fontSize: '18px', 
-            cursor: 'pointer',
-            transition: 'all 0.2s ease',
+        {/* Registration Success Message */}
+        {registrationSuccess && (
+          <div className="animate-fade-up" style={{
+            padding: '16px 24px',
+            borderRadius: '12px',
+            background: 'rgba(16, 185, 129, 0.1)',
+            border: '1px solid rgba(16, 185, 129, 0.2)',
+            color: '#6ee7b7',
+            marginBottom: '24px',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center'
-          }}
-          onMouseEnter={(e) => { e.target.style.background = '#e2e8f0'; }}
-          onMouseLeave={(e) => { e.target.style.background = '#f8fafc'; }}
-          title="Refresh Data"
-        >
-          🔄
-        </button>
-      </div>
+            gap: '12px',
+            backdropFilter: 'blur(10px)'
+          }}>
+            <span style={{ fontSize: '18px' }}>✅</span>
+            {registrationSuccess}
+          </div>
+        )}
 
-      {/* Table */}
-      <div style={{ background: '#fff', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 4px 12px rgba(0,0,0,0.01)', border: '1px solid #f1f5f9' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-          <thead>
-            <tr style={{ borderBottom: '1px solid #f1f5f9', backgroundColor: '#fcfdfe' }}>
-              <th style={{ padding: '18px 24px', color: '#718096', fontWeight: '500', fontSize: '14px' }}>Name</th>
-              <th style={{ padding: '18px 24px', color: '#718096', fontWeight: '500', fontSize: '14px' }}>Domain</th>
-              <th style={{ padding: '18px 24px', color: '#718096', fontWeight: '500', fontSize: '14px' }}>Stage</th>
-              <th style={{ padding: '18px 24px', color: '#718096', fontWeight: '500', fontSize: '14px' }}>Source</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredCandidates.length === 0 ? (
-              <tr>
-                <td colSpan="4" style={{ padding: '40px', textAlign: 'center', color: '#94a3b8', fontSize: '15px' }}>No candidates found matching current workspace filters.</td>
+        <h1 className="animate-fade-up delay-100" style={{ color: '#fff', marginBottom: '40px', fontWeight: '800', fontSize: '48px', letterSpacing: '-1px' }}>
+          Workspace Overview
+        </h1>
+        
+        {/* KPI Cards */}
+        <div className="animate-fade-up delay-200" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '16px', marginBottom: '40px' }}>
+          {kpiData.map(m => (
+            <div 
+              key={m.label} 
+              onClick={() => setStageFilter(m.filterValue)} 
+              style={{ 
+                background: stageFilter === m.filterValue ? 'rgba(255, 255, 255, 0.1)' : 'rgba(255, 255, 255, 0.03)', 
+                padding: '20px 16px', 
+                borderRadius: '16px', 
+                border: '1px solid var(--glass-border)',
+                borderTop: `4px solid ${m.color}`, 
+                cursor: 'pointer', 
+                textAlign: 'center',
+                transform: stageFilter === m.filterValue ? 'translateY(-4px)' : 'translateY(0)',
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                backdropFilter: 'blur(16px)',
+                boxShadow: stageFilter === m.filterValue ? `0 10px 30px ${m.color}20` : 'none'
+              }}
+            >
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: '700', letterSpacing: '1px', marginBottom: '12px' }}>{m.label}</div>
+              <div style={{ fontSize: '36px', fontWeight: '800', color: stageFilter === m.filterValue ? m.color : '#fff' }}>{m.count}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Filter Row */}
+        <div className="glass-panel animate-fade-up delay-300" style={{ 
+          display: 'flex', 
+          gap: '16px', 
+          marginBottom: '30px', 
+          flexWrap: 'nowrap', 
+          alignItems: 'center',
+          padding: '16px 24px',
+        }}>
+          {/* Search */}
+          <input 
+            type="text" 
+            placeholder="Search candidate..." 
+            value={search} 
+            onChange={(e) => setSearch(e.target.value)} 
+            style={{ ...inputStyle, flex: 1, minWidth: '200px' }}
+            onFocus={(e) => e.target.style.borderColor = 'var(--primary)'}
+            onBlur={(e) => e.target.style.borderColor = 'var(--glass-border)'}
+          />
+          
+          {/* All Domains Dropdown */}
+          <select 
+            value={domainFilter} 
+            onChange={(e) => setDomainFilter(e.target.value)} 
+            style={{ ...inputStyle, minWidth: '180px', cursor: 'pointer' }}
+            onFocus={(e) => e.target.style.borderColor = 'var(--primary)'}
+            onBlur={(e) => e.target.style.borderColor = 'var(--glass-border)'}
+          >
+            <option value="" style={{ color: '#000' }}>All Domains</option>
+            {uniqueDomains.map(d => <option key={d} value={d} style={{ color: '#000' }}>{d}</option>)}
+          </select>
+
+          {/* Total Button */}
+          <button
+            onClick={() => setStageFilter('')}
+            className={stageFilter === '' ? 'btn-premium' : 'btn-glass'}
+            style={{ padding: '10px 24px', minWidth: '120px' }}
+          >
+            Total ({metrics.total})
+          </button>
+
+          {/* View All Questions Button */}
+          <button 
+            onClick={() => navigate('/questions')}
+            className="btn-premium"
+            style={{ background: 'linear-gradient(135deg, #8b5cf6, #c084fc)', padding: '10px 24px' }}
+          >
+            💬 Support Hub
+          </button>
+
+          {/* Refresh Button */}
+          <button 
+            onClick={() => fetchDashboardData()}
+            className="btn-glass"
+            style={{ padding: '10px 16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            title="Sync Data"
+          >
+            🔄
+          </button>
+        </div>
+
+        {/* Table */}
+        <div className="glass-panel animate-fade-up delay-300" style={{ overflow: 'hidden', padding: 0 }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+            <thead>
+              <tr style={{ borderBottom: '1px solid var(--glass-border)', backgroundColor: 'rgba(255,255,255,0.02)' }}>
+                <th style={{ padding: '20px 24px', color: 'var(--text-muted)', fontWeight: '600', fontSize: '13px', textTransform: 'uppercase', letterSpacing: '1px' }}>Name</th>
+                <th style={{ padding: '20px 24px', color: 'var(--text-muted)', fontWeight: '600', fontSize: '13px', textTransform: 'uppercase', letterSpacing: '1px' }}>Domain</th>
+                <th style={{ padding: '20px 24px', color: 'var(--text-muted)', fontWeight: '600', fontSize: '13px', textTransform: 'uppercase', letterSpacing: '1px' }}>Stage</th>
+                <th style={{ padding: '20px 24px', color: 'var(--text-muted)', fontWeight: '600', fontSize: '13px', textTransform: 'uppercase', letterSpacing: '1px' }}>Source</th>
               </tr>
-            ) : (
-              filteredCandidates.map((c) => {
-                const stage = c.current_stage || '';
-                const stageKey = stage === 'Internship Discontinued' ? 'Internship Discontinued' : stage;
-                
-                const nameColor = stageColors[stageKey] || '#1d4ed8';
-                const bgColor = stageFilter === stage ? stageBgColors[stageKey] || '#f8fafc' : 'transparent';
-                const hoverBg = stageFilter === stage ? (stageBgColors[stageKey] || '#f8fafc') : '#f8fafc';
-                
-                let badgeBg = '#e4eaf2';
-                let badgeColor = '#2d3748';
-                if (stageFilter === stage) {
-                  badgeBg = stageBgColors[stageKey] || '#e4eaf2';
-                  badgeColor = stageColors[stageKey] || '#2d3748';
-                }
-                
-                return (
-                  <tr 
-                    key={c.id} 
-                    onClick={() => navigate(`/candidate/${c.id}`)} 
-                    style={{ 
-                      borderBottom: '1px solid #f8fafc', 
-                      cursor: 'pointer', 
-                      transition: 'background-color 0.15s ease',
-                      backgroundColor: bgColor
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = hoverBg}
-                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = bgColor}
-                  >
-                    <td style={{ padding: '20px 24px', fontWeight: '600', color: nameColor, fontSize: '16px' }}>
-                      {c.name || c.full_name}
-                    </td>
-                    <td style={{ padding: '20px 24px', color: '#4a5568', fontSize: '16px' }}>{c.domain}</td>
-                    <td style={{ padding: '20px 24px' }}>
-                      <span style={{ 
-                        padding: '6px 14px', 
-                        borderRadius: '12px', 
-                        fontSize: '13px', 
-                        fontWeight: '500', 
-                        background: stageFilter === stage ? badgeBg : '#e4eaf2',
-                        color: stageFilter === stage ? badgeColor : '#2d3748' 
-                      }}>
-                        {c.current_stage}
-                      </span>
-                    </td>
-                    <td style={{ padding: '20px 24px', color: '#718096', fontSize: '16px' }}>{c.source}</td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {filteredCandidates.length === 0 ? (
+                <tr>
+                  <td colSpan="4" style={{ padding: '60px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '15px' }}>
+                    No candidates found matching current parameters.
+                  </td>
+                </tr>
+              ) : (
+                filteredCandidates.map((c) => {
+                  const stage = c.current_stage || '';
+                  const stageKey = stage === 'Internship Discontinued' ? 'Internship Discontinued' : stage;
+                  
+                  const nameColor = stageColors[stageKey] || '#60a5fa';
+                  const isFiltered = stageFilter === stage;
+                  
+                  return (
+                    <tr 
+                      key={c.id} 
+                      onClick={() => navigate(`/candidate/${c.id}`)} 
+                      style={{ 
+                        borderBottom: '1px solid var(--glass-border)', 
+                        cursor: 'pointer', 
+                        transition: 'all 0.2s ease',
+                        backgroundColor: isFiltered ? 'rgba(255,255,255,0.04)' : 'transparent'
+                      }}
+                      onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.06)'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = isFiltered ? 'rgba(255,255,255,0.04)' : 'transparent'; }}
+                    >
+                      <td style={{ padding: '20px 24px', fontWeight: '600', color: '#fff', fontSize: '15px' }}>
+                        {c.name || c.full_name}
+                      </td>
+                      <td style={{ padding: '20px 24px', color: 'var(--text-muted)', fontSize: '14px' }}>{c.domain}</td>
+                      <td style={{ padding: '20px 24px' }}>
+                        <span style={{ 
+                          padding: '6px 14px', 
+                          borderRadius: '20px', 
+                          fontSize: '12px', 
+                          fontWeight: '600', 
+                          background: `rgba(${parseInt(nameColor.slice(1,3),16)}, ${parseInt(nameColor.slice(3,5),16)}, ${parseInt(nameColor.slice(5,7),16)}, 0.15)`,
+                          color: nameColor,
+                          border: `1px solid rgba(${parseInt(nameColor.slice(1,3),16)}, ${parseInt(nameColor.slice(3,5),16)}, ${parseInt(nameColor.slice(5,7),16)}, 0.3)`
+                        }}>
+                          {c.current_stage}
+                        </span>
+                      </td>
+                      <td style={{ padding: '20px 24px', color: 'var(--text-muted)', fontSize: '14px' }}>{c.source}</td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Modals remain structurally identical, ensuring backend logic isn't broken */}
+        {showRegisterModal && (
+          <RegisterUser 
+            onClose={() => setShowRegisterModal(false)}
+            onSuccess={handleRegistrationSuccess}
+          />
+        )}
+
+        {showChangePassword && (
+          <ChangePasswordModal onClose={() => setShowChangePassword(false)} />
+        )}
       </div>
-
-      {/* Register User Modal */}
-      {showRegisterModal && (
-        <RegisterUser 
-          onClose={() => setShowRegisterModal(false)}
-          onSuccess={handleRegistrationSuccess}
-        />
-      )}
-
-      {/* Change Password Modal */}
-      {showChangePassword && (
-        <ChangePasswordModal onClose={() => setShowChangePassword(false)} />
-      )}
-    </div>
+    </>
   );
 }
 

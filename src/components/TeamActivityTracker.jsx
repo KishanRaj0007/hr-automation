@@ -1,4 +1,4 @@
-// components/TeamActivityTracker.jsx - FIXED
+// components/TeamActivityTracker.jsx
 import { useEffect, useState } from 'react';
 import { supabase } from '../services/supabase';
 import { useAuth } from '../context/AuthContext';
@@ -15,7 +15,6 @@ function TeamActivityTracker() {
 
   async function fetchActivities() {
     setLoading(true);
-    
     try {
       let query = supabase
         .from('team_activity_log')
@@ -32,7 +31,6 @@ function TeamActivityTracker() {
       if (error) {
         console.error(' Error fetching activities:', error);
       } else {
-        console.log('Activities fetched:', data?.length || 0);
         setActivities(data || []);
       }
     } catch (error) {
@@ -43,61 +41,59 @@ function TeamActivityTracker() {
   }
 
   const getActionIcon = (action) => {
-  const icons = {
-    'assignment_sent': '👤',
-    'assignment_evaluated': '👤',
-    'interview_scheduled': '👤',
-    'interview_evaluated': '👤',
-    'status_updated': '👤',
-    'candidate_selected': '👤',
-    'candidate_rejected': '👤',
-    'candidate_hold': '👤',
-    'probation_started': '👤',
-    'probation_meeting_scheduled': '👤',
-    'onboarding_completed': '👤',
-    'internship_discontinued': '👤',
-    'candidate_terminated': '👤',
-    'candidate_withdrawn': '👤',
-    'candidate_waitlisted': '👤',
-    'candidate_restored_from_waitlist': '👤',
-    'candidate_restored_from_on_hold': '👤',
-    'interview_rescheduled_by_hr': '👤',
-    'probation_pending': '👤',
-    // ===== NEW ICONS =====
-    'candidate_force_scheduled': '👤',
-    'candidate_rejected_low_score': '👤',
-    'hr_replied_to_question': '👤',
-    'faq_added': '👤',
-    'faq_marked_from_question': '👤',
-    // ===== END NEW ICONS =====
-    'test_activity': '👤'
+    const icons = {
+      'assignment_sent': '📝',
+      'assignment_evaluated': '✅',
+      'interview_scheduled': '📅',
+      'interview_evaluated': '🎯',
+      'status_updated': '🔄',
+      'candidate_selected': '🏆',
+      'candidate_rejected': '❌',
+      'candidate_hold': '⏸️',
+      'probation_started': '🚀',
+      'probation_meeting_scheduled': '📆',
+      'onboarding_completed': '🎉',
+      'internship_discontinued': '⏹️',
+      'candidate_terminated': '⛔',
+      'candidate_withdrawn': '👋',
+      'candidate_waitlisted': '⏳',
+      'candidate_restored_from_waitlist': '♻️',
+      'candidate_restored_from_on_hold': '▶️',
+      'interview_rescheduled_by_hr': '⏱️',
+      'probation_pending': '⌛',
+      'candidate_force_scheduled': '⚡',
+      'candidate_rejected_low_score': '📉',
+      'hr_replied_to_question': '💬',
+      'faq_added': '📚',
+      'faq_marked_from_question': '📌',
+      'test_activity': '🧪'
+    };
+    return icons[action] || '📌';
   };
-  return icons[action] || '';
-};
 
   const getActionColor = (action) => {
     const colors = {
-      'assignment_sent': '#2563eb',
-      'assignment_evaluated': '#8b5cf6',
-      'interview_scheduled': '#f59e0b',
-      'interview_evaluated': '#10b981',
-      'status_updated': '#6366f1',
-      'candidate_selected': '#10b981',
-      'candidate_rejected': '#ef4444',
-      'candidate_hold': '#f59e0b',
-      'probation_started': '#3b82f6',
-      'probation_meeting_scheduled': '#8b5cf6',
-      'onboarding_completed': '#10b981',
-      'internship_discontinued': '#f97316',
-      'candidate_terminated': '#dc2626',
-      'candidate_withdrawn': '#8b5cf6',
-      'candidate_waitlisted': '#8b5cf6',
-      'candidate_restored_from_waitlist': '#10b981',
-      'interview_rescheduled_by_hr': '#f59e0b',
-      'probation_pending': '#f59e0b',
-      'test_activity': '#6b7280'
+      'assignment_sent': '#60a5fa',
+      'assignment_evaluated': '#a78bfa',
+      'interview_scheduled': '#fbbf24',
+      'interview_evaluated': '#34d399',
+      'status_updated': '#818cf8',
+      'candidate_selected': '#34d399',
+      'candidate_rejected': '#f87171',
+      'candidate_hold': '#fbbf24',
+      'probation_started': '#60a5fa',
+      'probation_meeting_scheduled': '#a78bfa',
+      'onboarding_completed': '#34d399',
+      'internship_discontinued': '#fb923c',
+      'candidate_terminated': '#f87171',
+      'candidate_withdrawn': '#a78bfa',
+      'candidate_waitlisted': '#a78bfa',
+      'candidate_restored_from_waitlist': '#34d399',
+      'interview_rescheduled_by_hr': '#fbbf24',
+      'probation_pending': '#fbbf24',
+      'test_activity': '#94a3b8'
     };
-    return colors[action] || '#6b7280';
+    return colors[action] || '#94a3b8';
   };
 
   const getTeamLabel = (team) => {
@@ -111,78 +107,59 @@ function TeamActivityTracker() {
     return labels[team] || team || 'Unknown';
   };
 
-  // ===== TEMPORARILY REMOVE isAdmin CHECK FOR DEBUGGING =====
-  // if (!isAdmin) return null;
-
   return (
-    <div style={{ 
-      background: '#fff', 
-      borderRadius: '12px', 
-      border: '1px solid #e2e8f0', 
-      padding: '20px',
-      marginTop: '20px'
-    }}>
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center', 
-        marginBottom: '16px' 
-      }}>
-        <h3 style={{ margin: 0, fontSize: '16px', color: '#0f172a' }}>
-          📋 Team Activity Log
-          
+    <div className="glass-panel animate-fade-up" style={{ padding: '30px', marginTop: '20px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
+        <h3 style={{ margin: 0, fontSize: '20px', color: '#fff', fontWeight: '700' }}>
+          📋 Global Activity Ledger
         </h3>
-        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
           <select
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
             style={{
-              padding: '6px 12px',
-              borderRadius: '6px',
-              border: '1px solid #e2e8f0',
-              fontSize: '13px',
-              background: '#fff',
-              color: '#1a202c'
+              padding: '8px 16px',
+              borderRadius: '8px',
+              border: '1px solid var(--glass-border)',
+              fontSize: '14px',
+              background: 'rgba(255, 255, 255, 0.05)',
+              color: '#fff',
+              outline: 'none',
+              cursor: 'pointer'
             }}
           >
-            <option value="all">All Teams</option>
-            <option value="assignment">Assignment Team</option>
-            <option value="scheduling">Scheduling Team</option>
-            <option value="panel_r1">R1 Panelists</option>
-            <option value="panel_r2">R2 Panelists</option>
-            <option value="leadership">Leadership</option>
+            <option value="all" style={{ color: '#000' }}>All Teams</option>
+            <option value="assignment" style={{ color: '#000' }}>Assignment Team</option>
+            <option value="scheduling" style={{ color: '#000' }}>Scheduling Team</option>
+            <option value="panel_r1" style={{ color: '#000' }}>R1 Panelists</option>
+            <option value="panel_r2" style={{ color: '#000' }}>R2 Panelists</option>
+            <option value="leadership" style={{ color: '#000' }}>Leadership</option>
           </select>
           <button
             onClick={fetchActivities}
-            style={{
-              padding: '6px 12px',
-              borderRadius: '6px',
-              border: '1px solid #e2e8f0',
-              background: '#f8fafc',
-              cursor: 'pointer',
-              fontSize: '13px',
-              color: '#475569'
-            }}
+            className="btn-glass"
+            style={{ padding: '8px 16px', fontSize: '14px' }}
           >
-            🔄 Refresh
+            🔄 Sync Ledger
           </button>
         </div>
       </div>
 
       {loading ? (
-        <p style={{ textAlign: 'center', color: '#94a3b8', padding: '20px 0' }}>
-          ⏳ Loading activities...
-        </p>
+        <div style={{ padding: '40px', textAlign: 'center' }}>
+          <div style={{ width: '40px', height: '40px', border: '4px solid rgba(255,255,255,0.1)', borderTop: '4px solid var(--primary)', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 16px' }} />
+          <p style={{ color: 'var(--text-muted)' }}>Decrypting logs...</p>
+        </div>
       ) : activities.length === 0 ? (
-        <p style={{ textAlign: 'center', color: '#94a3b8', padding: '30px 0' }}>
-          📭 No activities recorded yet. Activities will appear here as HR team members take actions.
+        <p style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '40px 0', border: '1px dashed rgba(255,255,255,0.1)', borderRadius: '12px' }}>
+          📭 Ledger is empty. Activities will stream here in real-time.
         </p>
       ) : (
-        <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
+        <div style={{ maxHeight: '600px', overflowY: 'auto', paddingRight: '10px' }}>
           {activities.map((activity, index) => {
-            // ✅ FIX: Check both panel and panelist in details (case-insensitive)
             const panelName = activity.details?.panel || activity.details?.panelist || '';
             const isPanelistUnknown = !panelName || panelName === 'Unknown' || panelName === '' || panelName === 'Panelist Not Assigned';
+            const actionColor = getActionColor(activity.action);
 
             return (
               <div
@@ -190,90 +167,93 @@ function TeamActivityTracker() {
                 style={{
                   display: 'flex',
                   alignItems: 'flex-start',
-                  padding: '12px 16px',
-                  borderBottom: index < activities.length - 1 ? '1px solid #f1f5f9' : 'none',
+                  padding: '20px',
+                  borderBottom: index < activities.length - 1 ? '1px solid var(--glass-border)' : 'none',
                   transition: 'background 0.2s',
-                  background: index % 2 === 0 ? '#fafafa' : 'transparent'
+                  background: index % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent',
+                  borderRadius: '12px',
+                  marginBottom: '8px'
                 }}
-                onMouseEnter={(e) => e.currentTarget.style.background = '#f1f5f9'}
-                onMouseLeave={(e) => e.currentTarget.style.background = index % 2 === 0 ? '#fafafa' : 'transparent'}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                onMouseLeave={(e) => e.currentTarget.style.background = index % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent'}
               >
                 <div style={{
-                  width: '36px',
-                  height: '36px',
-                  borderRadius: '8px',
-                  background: getActionColor(activity.action) + '20',
+                  width: '44px',
+                  height: '44px',
+                  borderRadius: '12px',
+                  background: `${actionColor}15`,
+                  border: `1px solid ${actionColor}40`,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontSize: '18px',
-                  marginRight: '14px',
+                  fontSize: '20px',
+                  marginRight: '20px',
                   flexShrink: 0
                 }}>
                   {getActionIcon(activity.action)}
                 </div>
+                
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                    <span style={{ fontWeight: '600', fontSize: '14px', color: '#0f172a' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '8px' }}>
+                    <span style={{ fontWeight: '700', fontSize: '15px', color: '#fff' }}>
                       {activity.user_name || 'System'}
                     </span>
                     <span style={{
-                      fontSize: '10px',
-                      padding: '2px 10px',
-                      borderRadius: '12px',
-                      background: '#e2e8f0',
-                      color: '#475569',
-                      fontWeight: '600'
+                      fontSize: '11px',
+                      padding: '4px 12px',
+                      borderRadius: '20px',
+                      background: 'rgba(255,255,255,0.1)',
+                      color: '#e2e8f0',
+                      fontWeight: '600',
+                      letterSpacing: '0.5px',
+                      textTransform: 'uppercase'
                     }}>
                       {getTeamLabel(activity.team)}
                     </span>
                     <span style={{ 
-                      fontSize: '12px', 
-                      color: getActionColor(activity.action),
-                      fontWeight: '500'
+                      fontSize: '13px', 
+                      color: actionColor,
+                      fontWeight: '600',
+                      letterSpacing: '0.5px'
                     }}>
                       {activity.action?.replace(/_/g, ' ').toUpperCase()}
                     </span>
                   </div>
-                  <div style={{ fontSize: '13px', color: '#070808', marginTop: '4px' }}>
+                  
+                  <div style={{ fontSize: '14px', color: 'var(--text-muted)', lineHeight: '1.6' }}>
                     {activity.details?.candidate_name && (
-                      <span>{activity.details.candidate_name}</span>
+                      <span style={{ color: '#fff', fontWeight: '500' }}>{activity.details.candidate_name}</span>
                     )}
-                    {/* ✅ FIX: Show panel name correctly using panelName variable */}
                     {activity.action === 'interview_scheduled' && panelName && !isPanelistUnknown && (
-                      <span> • {panelName}</span>
+                      <span> • Panel: <span style={{color: '#fff'}}>{panelName}</span></span>
                     )}
                     {activity.action === 'interview_scheduled' && isPanelistUnknown && (
-                      <span> • Panelist Not Assigned</span>
+                      <span> • <span style={{color: '#f87171'}}>Panelist Unassigned</span></span>
                     )}
                     {activity.details?.round && (
                       <span> • {activity.details.round}</span>
                     )}
                     {activity.details?.total_score && (
-                      <span> • Score: {activity.details.total_score}</span>
+                      <span> • Score: <span style={{color: '#fff', fontWeight: '600'}}>{activity.details.total_score}</span></span>
                     )}
                     {activity.details?.domain && (
                       <span> • {activity.details.domain}</span>
                     )}
                     {activity.details?.message && (
-                      <span> • {activity.details.message}</span>
+                      <span> • "{activity.details.message}"</span>
                     )}
                     {activity.details?.reason && (
-                      <span> • Reason: {activity.details.reason}</span>
+                      <span> • Reason: <span style={{fontStyle: 'italic'}}>{activity.details.reason}</span></span>
                     )}
                     {activity.details?.new_status && (
-                      <span> • Status: {activity.details.new_status}</span>
+                      <span> • Status: <span style={{color: '#fff'}}>{activity.details.new_status}</span></span>
                     )}
                   </div>
-                  <div style={{ fontSize: '11px', color: '#090a0a', marginTop: '4px' }}>
+                  
+                  <div style={{ fontSize: '12px', color: '#64748b', marginTop: '10px', fontWeight: '500' }}>
                      {new Date(activity.created_at).toLocaleString('en-IN', {
-                      day: '2-digit',
-                      month: 'short',
-                      year: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit',
-                      second: '2-digit',
-                      hour12: true
+                      day: '2-digit', month: 'short', year: 'numeric',
+                      hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true
                     })}
                   </div>
                 </div>
@@ -283,17 +263,16 @@ function TeamActivityTracker() {
         </div>
       )}
       
-      {/* Show count summary */}
       {activities.length > 0 && (
         <div style={{ 
-          marginTop: '12px', 
-          paddingTop: '12px', 
-          borderTop: '1px solid #f1f5f9',
-          fontSize: '12px',
-          color: '#94a3b8',
+          marginTop: '20px', 
+          paddingTop: '16px', 
+          borderTop: '1px solid var(--glass-border)',
+          fontSize: '13px',
+          color: 'var(--text-muted)',
           textAlign: 'center'
         }}>
-          Showing {activities.length} most recent activities
+          Displaying top {activities.length} ledger entries in real-time
         </div>
       )}
     </div>
