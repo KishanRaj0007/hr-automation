@@ -334,6 +334,9 @@ export default function CandidatePortalPage() {
     return Object.keys(errors).length === 0;
   }
 
+  // ==========================================
+  // FIX: HARD RELOAD AUTHENTICATION
+  // ==========================================
   async function handleLogin(e) {
     e.preventDefault(); setErrorMsg('');
     if (!emailInput.trim()) return;
@@ -341,9 +344,10 @@ export default function CandidatePortalPage() {
     const { data, error } = await supabase.from('candidates').select('*').eq('email', emailInput.trim().toLowerCase()).maybeSingle();
     if (error) { setErrorMsg('A database retrieval anomaly occurred.'); } 
     else if (data) {
+      // 🔥 HARD RESET: Dump browser RAM to kill Ghost State
+      localStorage.removeItem('candidateEmail');
       localStorage.setItem('candidateEmail', data.email);
-      setAssignment(null); setInterviews([]); setOnboardingData(null); setQuestions([]); setUploadedFiles([]); setAssignmentLink('');
-      setCandidate(data); navigate('/portal', { replace: true });
+      window.location.href = '/portal'; 
     } else {
       setErrorMsg('Email address not registered. Proceed to fill out the internship form.'); setIsRegistering(true);
     }
@@ -359,9 +363,11 @@ export default function CandidatePortalPage() {
     const { data: checkExist } = await supabase.from('candidates').select('*').eq('email', cleanEmail).maybeSingle();
     if (checkExist) {
       alert('This email profile matches a pre-existing profile. Logging into workspace.');
+      // 🔥 HARD RESET
+      localStorage.removeItem('candidateEmail');
       localStorage.setItem('candidateEmail', checkExist.email);
-      setAssignment(null); setInterviews([]); setOnboardingData(null); setQuestions([]); setUploadedFiles([]); setAssignmentLink('');
-      setCandidate(checkExist); navigate('/portal', { replace: true }); return;
+      window.location.href = '/portal';
+      return;
     }
     
     setUploading(true);
@@ -385,14 +391,19 @@ export default function CandidatePortalPage() {
       }
       
       alert('Registered successfully! Taking you to your workspace...');
+      // 🔥 HARD RESET
+      localStorage.removeItem('candidateEmail');
       localStorage.setItem('candidateEmail', newCand.email);
-      setAssignment(null); setInterviews([]); setOnboardingData(null); setQuestions([]); setUploadedFiles([]); setAssignmentLink('');
-      setCandidate(newCand);
-      setRegForm({ name: '', phone: '', domain: '', source: '', referrer_contact: '', referrer_name: '', other_source: '', portfolio_link: '', address: '', linkedin_profile: '', college_name: '', degree_course: '', graduation_year: '' });
-      setResumeFile(null); setEmailInput(''); setUploading(false);
-      navigate('/portal', { replace: true });
+      window.location.href = '/portal';
     } catch (err) { alert('An error occurred during registration. Please try again.'); setUploading(false); }
   }
+
+  const handleLogout = async () => {
+    // 🔥 HARD RESET
+    localStorage.removeItem('candidateEmail'); 
+    window.location.href = '/login'; 
+  };
+  // ==========================================
 
   async function handleSubmitQuestion(e) {
     e.preventDefault();
@@ -429,14 +440,6 @@ export default function CandidatePortalPage() {
     }
   }
 
-  const handleLogout = async () => {
-    try {
-      localStorage.removeItem('candidateEmail'); localStorage.clear(); sessionStorage.clear();
-      setCandidate(null); setAssignment(null); setInterviews([]); setOnboardingData(null); setQuestions([]); setUploadedFiles([]); setAssignmentLink(''); setEmailInput('');
-      navigate('/login', { replace: true }); 
-    } catch (err) { navigate('/login', { replace: true }); }
-  };
-
   const openFAQModal = () => setShowFAQModal(true);
   const closeFAQModal = () => setShowFAQModal(false);
 
@@ -454,7 +457,8 @@ export default function CandidatePortalPage() {
       const istTime = new Date(new Date(isoString).getTime() + (5.5 * 60 * 60 * 1000));
       const hours = istTime.getHours();
       const minutes = istTime.getMinutes().toString().padStart(2, '0');
-      return `${hours % 12 || 12}:${minutes} ${hours >= 12 ? 'PM' : 'AM'}`;
+      const ampm = hours >= 12 ? 'PM' : 'AM';
+      return `${hours % 12 || 12}:${minutes} ${ampm}`;
     } catch (e) { return ''; }
   }
 
