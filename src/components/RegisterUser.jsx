@@ -3,6 +3,21 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../services/supabase';
 
+// ✅ FIX: Moved ModalWrapper OUTSIDE the main component to prevent input focus loss
+const ModalWrapper = ({ children, onClose, showToast, toastMessage }) => (
+  <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
+    {showToast && (
+      <div style={{ position: 'fixed', top: '30px', left: '50%', transform: 'translateX(-50%)', background: 'rgba(16, 185, 129, 0.1)', border: '1px solid #10b981', color: '#6ee7b7', padding: '14px 28px', borderRadius: '12px', fontSize: '14px', fontWeight: '600', backdropFilter: 'blur(10px)', zIndex: 9999, display: 'flex', alignItems: 'center', gap: '10px' }}>
+        {toastMessage}
+      </div>
+    )}
+    <div className="glass-panel animate-fade-up" style={{ padding: '40px', maxWidth: '480px', width: '100%', maxHeight: '90vh', overflowY: 'auto', position: 'relative' }}>
+      <button onClick={onClose} className="btn-glass" style={{ position: 'absolute', top: '20px', right: '20px', padding: '6px 12px' }}>✕</button>
+      {children}
+    </div>
+  </div>
+);
+
 const RegisterUser = ({ onClose, onSuccess }) => {
   const { canRegisterUsers, registerUser, user } = useAuth();
   const [formData, setFormData] = useState({
@@ -123,23 +138,10 @@ const RegisterUser = ({ onClose, onSuccess }) => {
     if (tempPassword) { navigator.clipboard.writeText(tempPassword); setToastMessage('✅ Decryption key copied!'); setShowToast(true); }
   };
 
-  const ModalWrapper = ({ children }) => (
-    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
-      {showToast && (
-        <div style={{ position: 'fixed', top: '30px', left: '50%', transform: 'translateX(-50%)', background: 'rgba(16, 185, 129, 0.1)', border: '1px solid #10b981', color: '#6ee7b7', padding: '14px 28px', borderRadius: '12px', fontSize: '14px', fontWeight: '600', backdropFilter: 'blur(10px)', zIndex: 9999, display: 'flex', alignItems: 'center', gap: '10px' }}>
-          {toastMessage}
-        </div>
-      )}
-      <div className="glass-panel animate-fade-up" style={{ padding: '40px', maxWidth: '480px', width: '100%', maxHeight: '90vh', overflowY: 'auto', position: 'relative' }}>
-        <button onClick={onClose} className="btn-glass" style={{ position: 'absolute', top: '20px', right: '20px', padding: '6px 12px' }}>✕</button>
-        {children}
-      </div>
-    </div>
-  );
-
+  // Render Set Password flow
   if (mode === 'set_password' && usersWithoutAuth.length > 0 && selectedUser) {
     return (
-      <ModalWrapper>
+      <ModalWrapper onClose={onClose} showToast={showToast} toastMessage={toastMessage}>
         <h2 style={{ margin: '0 0 8px 0', color: '#fff', fontSize: '24px', fontWeight: '800' }}>🔑 Mount Auth Key</h2>
         <p style={{ margin: '0 0 24px 0', color: 'var(--text-muted)', fontSize: '14px', lineHeight: '1.5' }}>This node exists in the ledger but requires an active authentication key to connect.</p>
         
@@ -162,8 +164,9 @@ const RegisterUser = ({ onClose, onSuccess }) => {
     );
   }
 
+  // Render main Registration form
   return (
-    <ModalWrapper>
+    <ModalWrapper onClose={onClose} showToast={showToast} toastMessage={toastMessage}>
       {!showSuccess && (
         <div style={{ marginBottom: '32px' }}>
           <h2 style={{ margin: '0 0 8px 0', color: '#fff', fontSize: '24px', fontWeight: '800' }}>👤 Provision HR Node</h2>
@@ -194,8 +197,14 @@ const RegisterUser = ({ onClose, onSuccess }) => {
 
       {!showSuccess && (
         <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: '20px' }}><label style={labelStyle}>Full Name *</label><input type="text" placeholder="John Doe" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} required style={inputStyle} /></div>
-          <div style={{ marginBottom: '20px' }}><label style={labelStyle}>Organizational Email *</label><input type="email" placeholder="john@jarurat.care" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} required style={inputStyle} /></div>
+          <div style={{ marginBottom: '20px' }}>
+            <label style={labelStyle}>Full Name *</label>
+            <input type="text" placeholder="John Doe" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} required style={inputStyle} />
+          </div>
+          <div style={{ marginBottom: '20px' }}>
+            <label style={labelStyle}>Organizational Email *</label>
+            <input type="email" placeholder="john@jarurat.care" value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} required style={inputStyle} />
+          </div>
           <div style={{ marginBottom: '20px' }}>
             <label style={labelStyle}>Clearance Role *</label>
             <select value={formData.role} onChange={(e) => setFormData({...formData, role: e.target.value})} required style={{...inputStyle, color: '#000'}}>
